@@ -100,6 +100,128 @@ A minimal website that can be used to view c2pa-web output and as a sandbox for 
 
 A custom [NX executor](https://nx.dev/concepts/executors-and-configurations) that contains the logic for building c2pa-wasm using [wasm-bindgen](https://github.com/wasm-bindgen/wasm-bindgen).
 
+## Castlabs Stable Bundle
+
+The Castlabs-only [`Castlabs Stable Bundle`](.github/workflows/castlabs-stable-bundle.yml)
+manual workflow prepares release assets, not npm publications. The stable bundle
+label `1.0.7` maps to tag `v1.0.7`; package versions remain independent:
+`@stardustproof/c2pa-web@0.8.0`, `@stardustproof/c2pa-wasm@0.6.0`, and
+`@stardustproof/c2pa-types@0.4.3`.
+
+Bootstrap: the upstream-only guards in `release.yml` must be reviewed and merged
+before, or together with, default-branch registration of the manual workflow.
+Both inherited release jobs now require `github.repository == 'contentauth/c2pa-js'`.
+Consequently a Castlabs `main` push cannot run Changesets, automatic npm publication,
+or the inherited release-docs job. The npm commands themselves are unchanged.
+The manual workflow and its helpers must first be reviewed and merged onto
+the Castlabs repository's default branch before GitHub registers
+`workflow_dispatch`. An unshared local commit cannot be built by a hosted runner:
+the immutable JS source commit must also be present in `castlabs/c2pa-js`.
+The original repin is `ed584bff09dc3b76331b0e429a0256699d9e4e27` and changes
+only `Cargo.toml` and `Cargo.lock` to SDK
+`0aee9d318289ba4a5e0fe9e0fc1ddc59b0632f91`. Use the approved reachable source
+SHA, not a branch name; checkout, SDK pin, package versions, and tracked-file
+cleanliness are checked before and after building. Workflow helpers come from
+the immutable dispatch workflow commit, separately from the requested source.
+Merging/pushing and triggering this workflow require separate maintainer approval.
+
+After registration and source availability, the build-only command is:
+
+```sh
+gh workflow run castlabs-stable-bundle.yml --repo castlabs/c2pa-js \
+  -f source_sha=<full-approved-js-commit-sha> -f bundle_version=1.0.7 -F publish=false
+```
+
+The workflow directly builds release WASM, runs wasm-bindgen `0.2.114` and
+Binaryen `124`, and appends SHA-512 `WASM_SRI` to generated JS/declarations.
+It then runs the existing types build and Vite web build without Nx dependency
+builds. The Nx WASM executor is intentionally bypassed because it deletes the
+WASM Cargo target subtree. Rust `1.96.0`, Node `22.22.0`, and pnpm `10.15.0`
+are pinned. Two Cargo jobs, no incremental output or native debug symbols, and
+one Cargo target directory limit disk usage on the approximately 14 GB hosted
+runner. There are no new cache optimizations or duplicated Nx caches. All phases
+reuse that run's Cargo output; do not run `nx build/test c2pa-web` on it, since
+that would rebuild dependencies through the destructive executor.
+
+`pnpm pack` uses temporary package copies, leaving source versions untouched.
+Internal dependencies point to absolute `v1.0.7` GitHub-release tarball URLs,
+not unpublished registry versions or `workspace:` references. The artifact
+contains three `.tgz` files, `provenance.json` (source/SDK/lockfile hashes, tool
+versions, optimized WASM and package hashes, workflow commit/run URL, qualification
+results and limitations), and diagnostics even when qualification fails.
+The artifact name is stable for `github.run_id`, not `run_attempt`, so retrying a
+failed publish job can download the successful build's artifact. Rebuilding the
+whole run overwrites that artifact. The publish job checks the downloaded manifest's
+source SHA, SDK pin, workflow SHA, run ID, package identities and tarball hashes;
+an artifact from a failed or mismatched build is not releasable.
+
+`castlabs-consumer-smoke.mjs` installs the actual
+final `.tgz` files into an isolated consumer with lifecycle scripts disabled.
+Only that consumer's dependencies and pnpm overrides point at local tarballs;
+the final tarballs retain their release URLs and are rehashed after installation.
+Every internal dependency-graph entry must resolve locally to the expected package,
+and installed files are compared byte-for-byte with the hashed tarballs. The hook
+imports web, inline and WASM module exports, resolves/compares public WASM resources,
+checks SRI and compiles WASM, then typechecks consumer imports including
+`c2pa-types`. It does not use workspace aliases or source imports. Diagnostics
+include the consumer manifest, lockfile, dependency graph and result.
+
+The same installed consumer is served by Vite on loopback without workspace aliases
+or repository Vite configuration. Playwright uses the repository's installed
+`@playwright/test` from `packages/c2pa-web`; no consumer browser tooling is installed.
+Chromium, Firefox and WebKit each import the packed web entry point and fetch the
+packed WASM resource through `createC2pa`, initializing the real compiled worker.
+A standalone page runs all nine fragment-offset regression cases: all solo and
+ladder segments, absent/zero/wrong offsets, an invalid sidx cut, default settings,
+invalid integer offsets, and cross-rendition rejection. Settings remain argument
+four and fragment options argument five. Only fixture bytes/layout are copied from
+the immutable repository; no source SDK modules or source test harness are imported.
+Per-browser commands, exit codes, versions, case results and errors are recorded,
+alongside fixture and package hashes. A missing browser, timeout, failed case or
+page error fails qualification. All three browsers are attempted, and packaged
+checks still run after source-suite failures without replacing those results.
+
+Full web suites run sequentially in Chromium, Firefox and WebKit. Any nonzero
+result blocks release creation; the known stable baseline's seven Chromium and
+six Firefox failures are **not** an allowlist. Old report-array fixtures require
+a separate user decision, not an unrelated snapshot update here. Failed runs
+can still supply diagnostic/build-only tarballs; they are not qualified releases.
+The gate does not replace inherited Rust/WASM tests or lint CI, which remain
+separate. The only inherited publishing-workflow change is the upstream repository
+guard; the manual workflow calls no npm publishing command and assumes no npm secrets.
+
+Provenance starts with `packagedBrowserQualification` marked `not-run`, not passed.
+The consumer hook sets it from actual browser-command results; publication checks
+all three zero exits and all nine successful cases per browser, matching the packed
+asset hashes. A boolean success flag alone is insufficient. This targeted packaged
+suite complements, and does not replace, the full source-browser gate. The hosted
+pipeline is implemented but has not been qualified end-to-end locally: complete
+WASM build outputs are unavailable here and no new native build was attempted.
+
+Only an explicitly approved rerun with `publish=true` and all gates green will let a
+separate `contents: write` job create a **new draft** GitHub release at the source
+SHA. Existing tags/releases are rejected, never overwritten. Build jobs have
+only `contents: read`. No job publishes the draft or npm packages. Maintainers
+must review provenance and remaining CI before manually publishing; tarball
+dependency URLs are unavailable to normal consumers while the release is draft.
+
+Lightweight local checks (use an external `TMPDIR` on a disk-constrained machine):
+
+```sh
+node --check tools/castlabs-release.mjs
+node --check tools/castlabs-consumer-smoke.mjs
+node --test tools/castlabs-release.test.mjs
+actionlint .github/workflows/castlabs-stable-bundle.yml
+actionlint .github/workflows/release.yml
+```
+
+The Node tests pack synthetic prebuilt files with real pnpm and validate manifests,
+contents, hashes, SRI, immutable-source checks and rejection cases without a native
+build. They also test consumer-only overrides and install the synthetic internal
+tarballs without registry dependencies, checking local resolution and installed
+bytes. These fixtures do not qualify the real SDK or packaged browser behavior.
+They create only disposable fixture git objects, not source-worktree commits.
+
 ## License
 
 This project is licensed under the terms of the [MIT license](https://github.com/contentauth/c2pa-js-v2/blob/main/LICENSE).

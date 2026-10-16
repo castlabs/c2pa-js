@@ -1,0 +1,226 @@
+name: Castlabs Stable Bundle
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Full immutable c2pa-js commit SHA (must include stable SDK 0aee9d3)
+        type: string
+        required: true
+      bundle_version:
+        description: Release bundle label (not an npm package version)
+        type: string
+        default: '1.0.7'
+        required: true
+      publish:
+        description: Create a draft GitHub release after all gates pass (never npm)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: castlabs-stable-bundle-${{ inputs.bundle_version }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.repository == 'castlabs/c2pa-js'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    env:
+      CARGO_BUILD_JOBS: '2'
+      CARGO_INCREMENTAL: '0'
+      CARGO_PROFILE_DEV_DEBUG: '0'
+      CARGO_PROFILE_TEST_DEBUG: '0'
+      NX_DAEMON: 'false'
+      NX_SKIP_NX_CACHE: 'true'
+      NX_NO_CLOUD: 'true'
+      SOURCE_SHA: ${{ inputs.source_sha }}
+      BUNDLE_VERSION: ${{ inputs.bundle_version }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: source
+    steps:
+      # Keep the workflow helpers separate so an older immutable source SHA can be built.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: automation
+          persist-credentials: false
+      - name: Validate inputs
+        working-directory: automation
+        run: |
+          echo "CARGO_TARGET_DIR=$RUNNER_TEMP/cargo-target" >> "$GITHUB_ENV"
+          echo "RELEASE_DIR=$RUNNER_TEMP/stable-bundle" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/stable-bundle/diagnostics"
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$BUNDLE_VERSION" == 1.0.7 ]]
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha }}
+          path: source
+          persist-credentials: false
+      - name: Verify immutable source and SDK pin
+        run: |
+          node ../automation/tools/castlabs-release.mjs verify "$PWD" "$RELEASE_DIR" "$SOURCE_SHA" "$BUNDLE_VERSION" | tee "$RELEASE_DIR/diagnostics/source.json"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+      - uses: dtolnay/rust-toolchain@1.96.0
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Install pinned build tools and dependencies (no build caches)
+        run: |
+          tools="$RUNNER_TEMP/stable-tools"
+          mkdir -p "$tools"
+          curl --fail --location --retry 3 https://github.com/wasm-bindgen/wasm-bindgen/releases/download/0.2.114/wasm-bindgen-0.2.114-x86_64-unknown-linux-musl.tar.gz -o "$tools/bindgen.tar.gz"
+          tar -xzf "$tools/bindgen.tar.gz" -C "$tools"
+          echo "$tools/wasm-bindgen-0.2.114-x86_64-unknown-linux-musl" >> "$GITHUB_PATH"
+          curl --fail --location --retry 3 https://github.com/WebAssembly/binaryen/releases/download/version_124/binaryen-version_124-node.tar.gz -o "$tools/binaryen.tar.gz"
+          tar -xzf "$tools/binaryen.tar.gz" -C "$tools"
+          mv "$tools/binaryen-version_124/wasm-opt.js" "$tools/binaryen-version_124/wasm-opt.cjs"
+          sha256sum "$tools/"*.tar.gz > "$RELEASE_DIR/diagnostics/tool-downloads.sha256"
+          pnpm install --frozen-lockfile 2>&1 | tee "$RELEASE_DIR/diagnostics/pnpm-install.log"
+          cargo fetch --locked 2>&1 | tee "$RELEASE_DIR/diagnostics/cargo-fetch.log"
+      - name: Record tools and check release helper
+        run: |
+          node --check ../automation/tools/castlabs-release.mjs
+          node --check ../automation/tools/castlabs-consumer-smoke.mjs
+          CASTLABS_TEST_SOURCE="$PWD" node --test ../automation/tools/castlabs-release.test.mjs
+          node --input-type=module <<'NODE'
+          import { execFileSync } from 'node:child_process';
+          import { writeFileSync } from 'node:fs';
+          const version = (cmd, args = ['--version']) => execFileSync(cmd, args, { encoding: 'utf8' }).trim();
+          const tools = { node: version('node'), pnpm: version('pnpm'), rustc: version('rustc', ['-Vv']), cargo: version('cargo'), bindgen: version('wasm-bindgen'), binaryen: version('node', [`${process.env.RUNNER_TEMP}/stable-tools/binaryen-version_124/wasm-opt.cjs`, '--version']) };
+          if (!tools.bindgen.startsWith('wasm-bindgen 0.2.114') || !/\b124\b/.test(tools.binaryen)) throw new Error('Tool version mismatch');
+          writeFileSync(`${process.env.RELEASE_DIR}/diagnostics/tool-versions.json`, JSON.stringify(tools, null, 2));
+          NODE
+      - name: Build WASM, types and web exactly once
+        env:
+          CARGO_NET_OFFLINE: 'true'
+        run: |
+          cargo build --locked --release --target wasm32-unknown-unknown -p c2pa-wasm 2>&1 | tee "$RELEASE_DIR/diagnostics/wasm-build.log"
+          wasm-bindgen "$CARGO_TARGET_DIR/wasm32-unknown-unknown/release/c2pa_wasm.wasm" --out-dir packages/c2pa-wasm/pkg --out-name c2pa --target web --omit-default-module-path
+          node "$RUNNER_TEMP/stable-tools/binaryen-version_124/wasm-opt.cjs" packages/c2pa-wasm/pkg/c2pa_bg.wasm -o packages/c2pa-wasm/pkg/c2pa_bg.wasm -Oz
+          node ../automation/tools/castlabs-release.mjs sri "$PWD" | tee "$RELEASE_DIR/diagnostics/wasm-sri.txt"
+          pnpm --dir packages/c2pa-types build 2>&1 | tee "$RELEASE_DIR/diagnostics/types-build.log"
+          pnpm exec vite build --config packages/c2pa-web/vite.config.ts 2>&1 | tee "$RELEASE_DIR/diagnostics/web-build.log"
+          node ../automation/tools/castlabs-release.mjs verify "$PWD" "$RELEASE_DIR" "$SOURCE_SHA" "$BUNDLE_VERSION"
+      - name: Pack and verify release tarballs
+        id: pack
+        run: |
+          node ../automation/tools/castlabs-release.mjs pack "$PWD" "$RELEASE_DIR" "$SOURCE_SHA" "$BUNDLE_VERSION" 2>&1 | tee "$RELEASE_DIR/diagnostics/pack.log"
+      - name: Install qualification browsers
+        id: browsers
+        working-directory: source/packages/c2pa-web
+        run: pnpm exec playwright install --with-deps chromium firefox webkit 2>&1 | tee "$RELEASE_DIR/diagnostics/browsers.log"
+      - name: Qualify full browser suites (no baseline waiver)
+        run: |
+          node ../automation/tools/castlabs-release.mjs qualify "$PWD" "$RELEASE_DIR" "$SOURCE_SHA" "$BUNDLE_VERSION" 2>&1 | tee "$RELEASE_DIR/diagnostics/qualification.log"
+      - name: Qualify installed release tarballs, including WASM workers in all three browsers
+        if: ${{ !cancelled() && steps.pack.outcome == 'success' && steps.browsers.outcome == 'success' }}
+        run: |
+          node ../automation/tools/castlabs-consumer-smoke.mjs "$PWD" "$RELEASE_DIR" "$SOURCE_SHA" "$BUNDLE_VERSION" 2>&1 | tee "$RELEASE_DIR/diagnostics/consumer-smoke.log"
+      - name: Runner diagnostics
+        if: always()
+        working-directory: ${{ github.workspace }}
+        run: |
+          RELEASE_DIR="$RUNNER_TEMP/stable-bundle"
+          mkdir -p "$RELEASE_DIR/diagnostics"
+          df -h > "$RELEASE_DIR/diagnostics/disk.txt"
+          if [[ -d source/.git ]]; then
+            git -C source status --short > "$RELEASE_DIR/diagnostics/source-status.txt"
+            git -C source diff > "$RELEASE_DIR/diagnostics/source.diff"
+          fi
+      - name: Upload bundles and diagnostics, including failed qualification
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: castlabs-stable-bundle-${{ github.run_id }}
+          overwrite: true
+          path: ${{ runner.temp }}/stable-bundle/
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    needs: build
+    if: inputs.publish && needs.build.result == 'success' && github.repository == 'castlabs/c2pa-js'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: castlabs/c2pa-js
+      SOURCE_SHA: ${{ inputs.source_sha }}
+      BUNDLE_VERSION: ${{ inputs.bundle_version }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: castlabs-stable-bundle-${{ github.run_id }}
+          path: bundle
+      - name: Verify qualification and asset hashes
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          import { createHash } from 'node:crypto';
+          const manifest = JSON.parse(readFileSync('bundle/provenance.json'));
+          assert.equal(manifest.qualification.passed, true);
+          assert.equal(manifest.consumerSmoke.passed, true);
+          const packaged = manifest.packagedBrowserQualification;
+          assert.equal(packaged.passed, true);
+          assert.equal(packaged.status, 'passed');
+          assert.equal(packaged.scope, 'installed-tarballs/fragment-offset-v1');
+          assert.deepEqual(packaged.packageHashes, manifest.packages.map(({ file, sha256 }) => ({ file, sha256 })));
+          assert.deepEqual(packaged.results.map(result => result.browser), ['chromium', 'firefox', 'webkit']);
+          const cases = ['valid-solo-segments', 'missing-and-zero-offset', 'wrong-offset', 'sidx-cut', 'without-settings', 'invalid-offsets', 'valid-ladder-segments', 'cross-rendition', 'ladder-missing-offset'];
+          for (const result of packaged.results) {
+            assert.equal(result.exitCode, 0);
+            assert.equal(result.signal, null);
+            assert.equal(result.command.length, 7);
+            assert.ok(result.command[1].endsWith('/tools/castlabs-consumer-smoke.mjs'));
+            assert.equal(result.command[2], 'browser');
+            assert.equal(result.command[5], result.browser);
+            assert.equal(result.report.browser, result.browser);
+            assert.equal(result.report.scope, packaged.scope);
+            assert.equal(typeof result.report.version, 'string');
+            assert.ok(result.report.version.length > 0);
+            assert.equal(result.report.passed, true);
+            assert.deepEqual(result.report.pageErrors, []);
+            assert.deepEqual(result.report.cases.map(test => test.name), cases);
+            assert.ok(result.report.cases.every(test => test.passed === true));
+          }
+          assert.equal(manifest.sources.js.sha, process.env.SOURCE_SHA);
+          assert.equal(manifest.sources.js.repository, 'https://github.com/castlabs/c2pa-js');
+          assert.equal(manifest.sources.sdk.sha, '0aee9d318289ba4a5e0fe9e0fc1ddc59b0632f91');
+          assert.equal(manifest.workflowSha, process.env.GITHUB_WORKFLOW_SHA);
+          assert.equal(manifest.runId, process.env.GITHUB_RUN_ID);
+          assert.equal(manifest.bundleVersion, process.env.BUNDLE_VERSION);
+          assert.equal(manifest.tag, `v${process.env.BUNDLE_VERSION}`);
+          assert.deepEqual(manifest.packages.map(pkg => [pkg.name, pkg.version]), [
+            ['@stardustproof/c2pa-types', '0.4.3'], ['@stardustproof/c2pa-wasm', '0.6.0'], ['@stardustproof/c2pa-web', '0.8.0']
+          ]);
+          for (const pkg of manifest.packages) {
+            assert.equal(pkg.file, `stardustproof-${pkg.name.split('/')[1]}-${pkg.version}.tgz`);
+            assert.equal(createHash('sha256').update(readFileSync(`bundle/${pkg.file}`)).digest('hex'), pkg.sha256);
+          }
+          NODE
+      - name: Create a new draft release only (never overwrite a tag or release)
+        shell: bash
+        run: |
+          tag="v$BUNDLE_VERSION"
+          # Fail closed on API errors as well as existing tags, including drafts.
+          gh api --paginate "repos/$GH_REPO/git/matching-refs/tags/$tag" --jq '.[].ref' > refs.txt
+          if [[ -s refs.txt ]]; then echo 'Tag already exists'; exit 1; fi
+          gh api --paginate "repos/$GH_REPO/releases?per_page=100" --jq '.[].tag_name' > releases.txt
+          if grep -Fxq "$tag" releases.txt; then echo 'Release already exists'; exit 1; fi
+          gh release create "$tag" bundle/*.tgz bundle/provenance.json \
+            --target "$SOURCE_SHA" --draft --title "Castlabs c2pa-js $BUNDLE_VERSION" \
+            --notes 'Independent package versions: web 0.8.0, WASM 0.6.0, types 0.4.3. See provenance.json and the workflow diagnostics. Draft assets and dependency URLs are not public until a maintainer publishes this release. No npm publication.'

@@ -60,7 +60,13 @@ test('consumer-only overrides pin every internal package to a verified tarball w
   }
 });
 
-test('serialized standalone browser cases have valid module syntax and cover all nine regression groups', () => {
+test('consumer probes select disposable declarations and cover all nine browser regression groups', () => {
+  const smoke = readFileSync(new URL('./castlabs-consumer-smoke.mjs', import.meta.url), 'utf8');
+  const command = smoke.split('\n').find(line => line.includes("'probe.mts', '--noEmit'"));
+  assert.ok(command);
+  let probe;
+  new Function('run', 'process', 'join', 'root', 'consumer', command)((...args) => { probe = args; }, process, join, '/source', '/consumer');
+  assert.deepEqual(probe, [process.execPath, [join('/source', 'node_modules/typescript/bin/tsc'), 'probe.mts', '--noEmit', '--strict', '--module', 'nodenext', '--moduleResolution', 'nodenext', '--target', 'ES2023', '--lib', 'ES2023,DOM,ESNext.Disposable'], '/consumer', true]);
   const pageFunction = packagedCasesInBrowser.toString();
   const result = spawnSync(process.execPath, ['--check', '--input-type=module'], { input: `(${pageFunction});`, encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);

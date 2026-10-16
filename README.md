@@ -166,6 +166,14 @@ checks SRI and compiles WASM, then typechecks consumer imports including
 `c2pa-types`. It does not use workspace aliases or source imports. Diagnostics
 include the consumer manifest, lockfile, dependency graph and result.
 
+TypeScript consumers of the generated wasm-bindgen declarations need
+`ESNext.Disposable` in `compilerOptions.lib` for `[Symbol.dispose]`, alongside their
+existing libraries (the probe uses `ES2023,DOM,ESNext.Disposable`). This adds type
+declarations only; it does not change the ES runtime target or provide a polyfill.
+
+Build run `38903762084` failed this installed-consumer typecheck with TS2550 before
+any packaged-browser cases ran (zero cases, not a browser qualification pass).
+
 The same installed consumer is served by Vite on loopback without workspace aliases
 or repository Vite configuration. Playwright uses the repository's installed
 `@playwright/test` from `packages/c2pa-web`; no consumer browser tooling is installed.

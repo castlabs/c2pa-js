@@ -64,6 +64,7 @@ export default {
               alg: 'Ed25519',
               cert_serial_number:
                 '638838410810235485828984295321338730070538954823',
+              common_name: 'C2PA Signer',
               issuer: 'C2PA Test Signing Cert',
               revocation_status: true
             },

@@ -64,6 +64,7 @@ export default {
               alg: 'Ed25519',
               cert_serial_number:
                 '638838410810235485828984295321338730070538954823',
+              common_name: 'C2PA Signer',
               issuer: 'C2PA Test Signing Cert',
               revocation_status: true
             },
@@ -161,21 +162,8 @@ export default {
             'timestamp cert untrusted: DigiCert SHA256 RSA4096 Timestamp Responder 2025 1'
         }
       ],
-      failure: [
-        {
-          code: 'signingCredential.untrusted',
-          explanation: 'signing certificate untrusted',
-          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity'
-        }
-      ]
+      failure: []
     }
   },
-  validation_state: 'Valid',
-  validation_status: [
-    {
-      code: 'signingCredential.untrusted',
-      explanation: 'signing certificate untrusted',
-      url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity'
-    }
-  ]
+  validation_state: 'Valid'
 } satisfies ManifestStore;

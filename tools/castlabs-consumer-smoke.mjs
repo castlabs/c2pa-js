@@ -272,7 +272,7 @@ const exports = [createC2pa, createInline, init, WASM_SRI];
 const manifest: ManifestStore | undefined = undefined;
 void exports; void manifest;
 `);
-    run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), 'probe.mts', '--noEmit', '--strict', '--module', 'nodenext', '--moduleResolution', 'nodenext', '--target', 'ES2023', '--lib', 'ES2023,DOM'], consumer, true);
+    run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), 'probe.mts', '--noEmit', '--strict', '--module', 'nodenext', '--moduleResolution', 'nodenext', '--target', 'ES2023', '--lib', 'ES2023,DOM,ESNext.Disposable'], consumer, true);
     assert.deepEqual(verifySource(root, sourceSha, label), bundle.sources);
     consumerManifest(bundle, output);
     bundle.consumerSmoke = { passed: true, status: 'passed', installed: evidence.installed, checks: ['isolated-pnpm-install', 'local-dependency-graph', 'installed-byte-hashes', 'module-exports', 'wasm-resource-aliases-and-compilation', 'typescript-consumer'] };

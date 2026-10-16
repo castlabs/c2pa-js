@@ -13,8 +13,8 @@
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
-import type { Manifest, ResourceRef } from "@contentauth/c2pa-types";
-import { Context } from "@contentauth/c2pa-utilities";
+import type { Manifest, ResourceRef } from "@stardustproof/c2pa-types";
+import { Context } from "@stardustproof/c2pa-utilities";
 import fs from "fs-extra";
 import path from "path";
 import * as crypto from "crypto";

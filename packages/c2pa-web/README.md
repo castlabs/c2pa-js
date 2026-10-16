@@ -1,5 +1,10 @@
 # c2pa-web
 
+This Castlabs source branch prepares `@stardustproof` packages. It does not yet
+expose browser VSI validation or attest new npm/CDN artifacts. Installation
+examples describe the intended package names; use reviewed matching artifacts.
+See the [VSI source plan](../../docs/castlabs-vsi/README.md).
+
 The SDK for interacting with [C2PA metadata](https://c2pa.org/) on the web.
 
 As a guiding philosophy, `c2pa-web` attempts to adhere closely to the API paradigms established by [`c2pa-rs`](https://github.com/contentauth/c2pa-rs).
@@ -7,7 +12,7 @@ As a guiding philosophy, `c2pa-web` attempts to adhere closely to the API paradi
 ## Installation
 
 ```sh
-npm install @contentauth/c2pa-web
+npm install @stardustproof/c2pa-web
 ```
 
 ## Importing the library
@@ -25,9 +30,9 @@ This requires that the Wasm binary be hosted separately.
 Use a solution appropriate to your tooling; for example, using Vite:
 
 ```typescript
-import { createC2pa } from '@contentauth/c2pa-web';
+import { createC2pa } from '@stardustproof/c2pa-web';
 
-import wasmSrc from '@contentauth/c2pa-web/resources/c2pa.wasm?url';
+import wasmSrc from '@stardustproof/c2pa-web/resources/c2pa.wasm?url';
 
 const c2pa = createC2pa({ wasmSrc });
 ```
@@ -35,24 +40,24 @@ const c2pa = createC2pa({ wasmSrc });
 Alternatively, you can request the binary from a CDN:
 
 ```typescript
-import { createC2pa } from '@contentauth/c2pa-web';
+import { createC2pa } from '@stardustproof/c2pa-web';
 
-// Ensure that [PACKAGE VERSION] matches the currently-installed version of @contentauth/c2pa-web.
+// Ensure that [PACKAGE VERSION] matches the currently-installed version of @stardustproof/c2pa-web.
 const c2pa = await createC2pa({
   wasmSrc:
-    'https://cdn.jsdelivr.net/npm/@contentauth/c2pa-web@[PACKAGE VERSION]/dist/resources/c2pa_bg.wasm'
+    'https://cdn.jsdelivr.net/npm/@stardustproof/c2pa-web@[PACKAGE VERSION]/dist/resources/c2pa_bg.wasm'
 });
 ```
 
 ### Using an inline Wasm binary
 
-Where it is not possible or convenient to request a separate resource over the network, use the `@contentauth/c2pa-web/inline` package, which has the Wasm binary encoded as a base64 string in the JavaScript file.
+Where it is not possible or convenient to request a separate resource over the network, use the `@stardustproof/c2pa-web/inline` package, which has the Wasm binary encoded as a base64 string in the JavaScript file.
 
 Using this package does not require an additional network request. However, it adds _significant_ size to the JavaScript bundle, and cannot take advantage of the higher-performance
 [`WebAssembly.compileStreaming()`](https://developer.mozilla.org/en-US/docs/WebAssembly/Reference/JavaScript_interface/compileStreaming_static) API.
 
 ```typescript
-import { createC2pa } from '@contentauth/c2pa-web/inline';
+import { createC2pa } from '@stardustproof/c2pa-web/inline';
 
 const c2pa = await createC2pa();
 ```
@@ -62,9 +67,9 @@ const c2pa = await createC2pa();
 `createC2pa` sets up the worker and Wasm binary; `Reader` and `Builder`'s creation methods each accept an optional `Context` (see [`c2pa-utilities`'s README](../c2pa-utilities/README.md#context-and-settings) for the full API) directly, so the same running worker can create as many `Reader`s/`Builder`s as needed, each configured independently:
 
 ```typescript
-import { createC2pa, Reader, Builder, Context } from '@contentauth/c2pa-web';
+import { createC2pa, Reader, Builder, Context } from '@stardustproof/c2pa-web';
 
-import wasmSrc from '@contentauth/c2pa-web/resources/c2pa.wasm?url';
+import wasmSrc from '@stardustproof/c2pa-web/resources/c2pa.wasm?url';
 
 const c2pa = await createC2pa({ wasmSrc });
 
@@ -117,7 +122,7 @@ See also the [API reference documentation](https://contentauth.github.io/c2pa-js
 Fetch an image and provide it to the `Reader`:
 
 ```typescript
-import { Reader } from '@contentauth/c2pa-web';
+import { Reader } from '@stardustproof/c2pa-web';
 
 const response = await fetch(
   'https://spec.c2pa.org/public-testfiles/image/jpeg/adobe-20220124-C.jpg'
@@ -177,7 +182,7 @@ The builder intent describes the type of operation being performed on the asset.
 - `update`: A restricted version of `edit` for non-editorial changes. There must be only one ingredient, as a parent. No changes can be made to the hashed content of the parent. There are additional restrictions on the types of changes that can be made.
 
 ```typescript
-import { Builder } from '@contentauth/c2pa-web';
+import { Builder } from '@stardustproof/c2pa-web';
 
 const builder = await Builder.new(c2pa);
 

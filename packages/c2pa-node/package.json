@@ -1,8 +1,9 @@
 {
-  "name": "@contentauth/c2pa-node",
+  "name": "@stardustproof/c2pa-node",
+  "private": true,
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/contentauth/c2pa-js.git",
+    "url": "git+https://github.com/castlabs/c2pa-js.git",
     "directory": "packages/c2pa-node"
   },
   "version": "0.9.9",
@@ -70,12 +71,12 @@
     "c2pa"
   ],
   "bugs": {
-    "url": "https://github.com/contentauth/c2pa-js/issues"
+    "url": "https://github.com/castlabs/c2pa-js/issues"
   },
-  "homepage": "https://github.com/contentauth/c2pa-js/tree/main/packages/c2pa-node#readme",
+  "homepage": "https://github.com/castlabs/c2pa-js/tree/feat/castlabs-live-video-vsi/packages/c2pa-node#readme",
   "dependencies": {
-    "@contentauth/c2pa-types": "workspace:*",
-    "@contentauth/c2pa-utilities": "workspace:*",
+    "@stardustproof/c2pa-types": "workspace:*",
+    "@stardustproof/c2pa-utilities": "workspace:*",
     "cargo-cp-artifact": "^0.1.9",
     "cli-progress": "^3.12.0",
     "debug": "^4.4.3",

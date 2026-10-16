@@ -7,7 +7,7 @@
  * it.
  */
 
-import type { SigningAlg } from '@contentauth/c2pa-utilities';
+import type { SigningAlg } from '@stardustproof/c2pa-utilities';
 
 export type { SigningAlg };
 

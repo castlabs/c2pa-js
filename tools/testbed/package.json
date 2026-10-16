@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@contentauth/c2pa-wasm": "workspace:*",
-    "@contentauth/c2pa-web": "workspace:*"
+    "@stardustproof/c2pa-wasm": "workspace:*",
+    "@stardustproof/c2pa-web": "workspace:*"
   },
   "devDependencies": {
     "vite-plugin-mkcert": "^1.17.9"

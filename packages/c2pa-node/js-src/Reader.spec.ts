@@ -13,10 +13,10 @@
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 // import native objects from built native code
-import type { ManifestStore } from "@contentauth/c2pa-types";
+import type { ManifestStore } from "@stardustproof/c2pa-types";
 import path from "path";
 import fs from "fs-extra";
-import { AssetTooLargeError, Context } from "@contentauth/c2pa-utilities";
+import { AssetTooLargeError, Context } from "@stardustproof/c2pa-utilities";
 
 import { Reader } from "./Reader.js";
 import { MAX_SIZE_IN_BYTES } from "./assetSize.js";

@@ -18,8 +18,8 @@ import type {
   Ingredient,
   Manifest,
   ManifestStore,
-} from "@contentauth/c2pa-types";
-import { Context } from "@contentauth/c2pa-utilities";
+} from "@stardustproof/c2pa-types";
+import { Context } from "@stardustproof/c2pa-utilities";
 
 import { getNeonBinary } from "./binary.js";
 import { resolveSettingsForNeon } from "./Settings.js";

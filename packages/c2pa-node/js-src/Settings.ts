@@ -12,7 +12,7 @@
 // each license.
 
 import fs from "fs-extra";
-import { Context, settingsToJson, withDefaultSettings } from "@contentauth/c2pa-utilities";
+import { Context, settingsToJson, withDefaultSettings } from "@stardustproof/c2pa-utilities";
 import type { C2paSettings } from "./types.d.ts";
 
 /**

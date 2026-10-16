@@ -11,8 +11,8 @@
 // specific language governing permissions and limitations under
 // each license.
 
-import type { Manifest, ManifestStore } from "@contentauth/c2pa-types";
-import type { Context } from "@contentauth/c2pa-utilities";
+import type { Manifest, ManifestStore } from "@stardustproof/c2pa-types";
+import type { Context } from "@stardustproof/c2pa-utilities";
 
 import { getNeonBinary } from "./binary.js";
 import { validateSourceAssetSize } from "./assetSize.js";

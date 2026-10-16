@@ -13,7 +13,7 @@
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 
-import type { Manifest } from "@contentauth/c2pa-types";
+import type { Manifest } from "@stardustproof/c2pa-types";
 import fs from "fs-extra";
 import * as crypto from "crypto";
 import { encode } from "cbor2";

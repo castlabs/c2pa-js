@@ -1,10 +1,10 @@
 {
-  "name": "@contentauth/c2pa-utilities",
+  "name": "@stardustproof/c2pa-utilities",
   "version": "0.3.1",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/contentauth/c2pa-js"
+    "url": "git+https://github.com/castlabs/c2pa-js"
   },
   "type": "module",
   "module": "./dist/index.js",
@@ -32,7 +32,7 @@
     }
   },
   "dependencies": {
-    "@contentauth/c2pa-types": "workspace:*",
+    "@stardustproof/c2pa-types": "workspace:*",
     "ts-deepmerge": "^8.0.0"
   },
   "scripts": {

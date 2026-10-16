@@ -12,7 +12,7 @@
 // each license.
 
 import fs from "fs-extra";
-import { validateAssetSize } from "@contentauth/c2pa-utilities";
+import { validateAssetSize } from "@stardustproof/c2pa-utilities";
 import type { SourceAsset } from "./types.d.ts";
 
 // c2pa-node runs server-side, so it can reasonably support larger assets than c2pa-web,

@@ -1,11 +1,16 @@
 # c2pa-wasm
 
+This Castlabs source branch enables the SDK live-video feature but does not yet
+export a stateful live-video validator. The installation name below is the
+maintained product namespace, not an attestation of a new published artifact.
+See the [VSI source plan](../../docs/castlabs-vsi/README.md).
+
 The WebAssembly wrapper for [`c2pa-rs`](https://github.com/contentauth/c2pa-rs) that powers `c2pa-web`, built with [wasm-bindgen](https://github.com/wasm-bindgen/wasm-bindgen). While these bindings can be used directly, most users will prefer the convenience of `c2pa-web`.
 
 ## Installation
 
 ```sh
-npm install @contentauth/c2pa-wasm
+npm install @stardustproof/c2pa-wasm
 ```
 
 ## Development

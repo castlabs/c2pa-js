@@ -19,7 +19,7 @@ import { CallbackSigner } from "./Signer.js";
 import { Builder } from "./Builder.js";
 import { Reader } from "./Reader.js";
 import type { JsCallbackSignerConfig, SigningAlg } from "./types.d.ts";
-import type { Manifest } from "@contentauth/c2pa-types";
+import type { Manifest } from "@stardustproof/c2pa-types";
 
 class TestSigner {
   private privateKey: crypto.KeyObject;

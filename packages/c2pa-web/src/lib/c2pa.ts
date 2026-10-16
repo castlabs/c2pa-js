@@ -7,8 +7,8 @@
  * it.
  */
 import { createWorkerManager, WorkerManager } from './worker/workerManager.js';
-import { WASM_SRI } from '@contentauth/c2pa-wasm';
-import { Settings } from '@contentauth/c2pa-utilities';
+import { WASM_SRI } from '@stardustproof/c2pa-wasm';
+import { Settings } from '@stardustproof/c2pa-utilities';
 import { createReaderFactory, ReaderFactory } from './reader.js';
 import { createBuilderFactory, BuilderFactory } from './builder.js';
 
@@ -23,7 +23,7 @@ export interface Config {
    * URL instead of an inline blob URL, which is required in environments
    * with a strict Content Security Policy that disallows blob: worker sources.
    *
-   * Host the file exported as `@contentauth/c2pa-web/c2pa_worker` alongside your
+   * Host the file exported as `@stardustproof/c2pa-web/c2pa_worker` alongside your
    * application and pass its URL here.
    */
   workerSrc?: URL;

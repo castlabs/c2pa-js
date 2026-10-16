@@ -8,15 +8,15 @@
  */
 
 import { test, describe, expect } from 'test/methods.js';
-import { ManifestDefinition, Ingredient, Action } from '@contentauth/c2pa-types';
+import { ManifestDefinition, Ingredient, Action } from '@stardustproof/c2pa-types';
 import { getBlobForAsset, createTestSigner } from 'test/utils.js';
-import { Context } from '@contentauth/c2pa-utilities';
+import { Context } from '@stardustproof/c2pa-utilities';
 import { Builder } from './builder.js';
 import { Reader } from './reader.js';
 import { createC2pa } from './c2pa.js';
 import type { CredentialHolder, SignerPayload } from './signer.js';
 
-import wasmSrc from '@contentauth/c2pa-web/resources/c2pa.wasm?url';
+import wasmSrc from '@stardustproof/c2pa-web/resources/c2pa.wasm?url';
 
 import C_JPG from 'test/assets/C.jpg';
 import PirateShip_cloud from 'test/assets/PirateShip_save_credentials_to_cloud.jpg';

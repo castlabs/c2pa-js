@@ -21,8 +21,8 @@
 import { test, describe, expect } from 'test/methods.js';
 import { getBlobForAsset } from 'test/utils.js';
 import { singleFileLayout as layout } from 'test/assets/single-file/layout.js';
-import { Context, type Settings } from '@contentauth/c2pa-utilities';
-import type { ManifestStore } from '@contentauth/c2pa-types';
+import { Context, type Settings } from '@stardustproof/c2pa-utilities';
+import type { ManifestStore } from '@stardustproof/c2pa-types';
 import type { C2pa } from './c2pa.js';
 import { Reader } from './reader.js';
 

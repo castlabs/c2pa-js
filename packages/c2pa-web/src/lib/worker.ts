@@ -9,7 +9,7 @@
 
 /// <reference lib="webworker" />
 
-import { WasmReader, initSync, WasmBuilder } from '@contentauth/c2pa-wasm';
+import { WasmReader, initSync, WasmBuilder } from '@stardustproof/c2pa-wasm';
 import { createWorkerObjectMap } from './worker/workerObjectMap.js';
 import { createWorkerTx, rx } from './worker/rpc.js';
 import { sanitizeManifestStore } from './worker/sanitizeManifestStore.js';

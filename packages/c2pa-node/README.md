@@ -1,6 +1,10 @@
 # CAI Node.js library
 
-`@contentauth/c2pa-node` is a Node.js library in the [c2pa-js](https://github.com/contentauth/c2pa-js) monorepo that can:
+This source line retains `@stardustproof/c2pa-node` as a private workspace
+package, not a published product. Installation examples below are inherited API
+documentation, not evidence that this private package is available on npm.
+
+`@stardustproof/c2pa-node` is a Node.js library in the [c2pa-js](https://github.com/castlabs/c2pa-js) monorepo that can:
 
 - Read and validate C2PA data from media files in supported formats.
 - Add signed manifests to media files in supported formats.
@@ -18,19 +22,19 @@ To build from source, you also need [Rust](https://www.rust-lang.org/tools/insta
 Using npm:
 
 ```sh
-npm install @contentauth/c2pa-node
+npm install @stardustproof/c2pa-node
 ```
 
 Using Yarn:
 
 ```sh
-yarn add @contentauth/c2pa-node
+yarn add @stardustproof/c2pa-node
 ```
 
 Using pnpm:
 
 ```sh
-pnpm add @contentauth/c2pa-node
+pnpm add @stardustproof/c2pa-node
 ```
 
 This command will download precompiled binaries for the following systems:
@@ -61,7 +65,7 @@ This generates HTML documentation in the `docs/` directory at the repo root. It 
 The `Reader` class is used to read and validate C2PA manifests from media files. It can parse embedded manifests or fetch remote manifests. Refer to the [Rust SDK](https://github.com/contentauth/c2pa-rs) for the list of settings and their effects.
 
 ```javascript
-import { Reader, Context } from '@contentauth/c2pa-node';
+import { Reader, Context } from '@stardustproof/c2pa-node';
 
 // Read from an asset file
 const reader = await Reader.fromAsset(inputAsset);
@@ -95,7 +99,7 @@ const remoteUrl = reader.remoteUrl();
 > [!NOTE]
 > `Reader.fromAsset`/`Reader.fromManifestDataAndAsset` also accept a raw settings object in place of a `Context` (e.g. `Reader.fromAsset(inputAsset, { verify: { verify_trust: true } })`), but this is deprecated — see [Per-instance settings (deprecated)](#per-instance-settings-deprecated).
 
-`Reader.fromAsset` and `Reader.fromManifestDataAndAsset` reject assets larger than 10 GB, throwing `AssetTooLargeError` (exported from `@contentauth/c2pa-node`). Note that for a `SourceBufferAsset`, this only rejects after the buffer is already fully allocated in memory. Pass a `FileAsset` instead for large or untrusted assets so oversized files are rejected before being read into memory.
+`Reader.fromAsset` and `Reader.fromManifestDataAndAsset` reject assets larger than 10 GB, throwing `AssetTooLargeError` (exported from `@stardustproof/c2pa-node`). Note that for a `SourceBufferAsset`, this only rejects after the buffer is already fully allocated in memory. Pass a `FileAsset` instead for large or untrusted assets so oversized files are rejected before being read into memory.
 
 > [!WARNING]
 > `mimeType` is optional on the input asset for `Reader.fromAsset`/`Reader.fromManifestDataAndAsset`. If it's omitted and cannot be inferred from the file extension, the native library falls back to detecting the format from the asset's bytes. **This is not a feature to lean on.** Always supply `mimeType` when it's known, as byte-based detection is slower than a direct lookup and can be unreliable, which could surface as more confusing errors later on. Only omit it when the caller has no way to determine the asset's format. `Builder` methods always require a `mimeType` to be provided.
@@ -105,7 +109,7 @@ const remoteUrl = reader.remoteUrl();
 The `Builder` class is the main component for creating and signing C2PA manifests. It provides methods to add assertions, resources, and ingredients to manifests, and handles the signing process. Use the `Signer` class to sign the manifests. Refer to the [Rust SDK](https://github.com/contentauth/c2pa-rs) for the list of settings and their effects.
 
 ```javascript
-import { Builder, Context } from '@contentauth/c2pa-node';
+import { Builder, Context } from '@stardustproof/c2pa-node';
 
 // Create a new builder
 const builder = await Builder.newAsync();
@@ -273,7 +277,7 @@ There are two types of archives sharing the same binary format:
 ##### Reading an archive and adding its ingredients
 
 ```javascript
-import { Reader, Builder, Context } from '@contentauth/c2pa-node';
+import { Reader, Builder, Context } from '@stardustproof/c2pa-node';
 import * as fs from 'node:fs/promises';
 
 // Read the archive using the application/c2pa MIME type
@@ -412,7 +416,7 @@ const definition = restoredBuilder.getManifestDefinition();
 console.log(definition.ingredients); // Contains the ingredient
 ```
 
-For complete type definitions, see the [@contentauth/c2pa-types](https://www.npmjs.com/package/@contentauth/c2pa-types) package.
+For complete type definitions, see the [c2pa-types source](../c2pa-types).
 
 ### Signers
 
@@ -423,7 +427,7 @@ The library provides several types of signers for different use cases:
 For local signing with certificates and private keys:
 
 ```javascript
-import { LocalSigner } from '@contentauth/c2pa-node';
+import { LocalSigner } from '@stardustproof/c2pa-node';
 
 // Create a local signer with certificate and private key
 const signer = LocalSigner.newSigner(
@@ -442,7 +446,7 @@ const signature = signer.sign(dataBuffer);
 For custom signing implementations using callbacks:
 
 ```javascript
-import { CallbackSigner } from '@contentauth/c2pa-node';
+import { CallbackSigner } from '@stardustproof/c2pa-node';
 
 // Create a callback signer
 const signer = CallbackSigner.newSigner(
@@ -468,7 +472,7 @@ For working with identity assertions and CAWG (Content Authenticity Working Grou
 Builds identity assertions with roles and referenced assertions:
 
 ```javascript
-import { IdentityAssertionBuilder, CallbackCredentialHolder } from '@contentauth/c2pa-node';
+import { IdentityAssertionBuilder, CallbackCredentialHolder } from '@stardustproof/c2pa-node';
 
 // Create a credential holder
 const credentialHolder = CallbackCredentialHolder.newCallbackCredentialHolder(
@@ -495,7 +499,7 @@ identityBuilder.addReferencedAssertions(['c2pa.actions']);
 Signs manifests with identity assertions:
 
 ```javascript
-import { IdentityAssertionSigner } from '@contentauth/c2pa-node';
+import { IdentityAssertionSigner } from '@stardustproof/c2pa-node';
 
 // Create an identity assertion signer
 const identitySigner = IdentityAssertionSigner.new(callbackSigner);
@@ -512,7 +516,7 @@ const manifest = await builder.signAsync(identitySigner, inputAsset, outputAsset
 The `Trustmark` class provides functionality for encoding and decoding trustmarks in images:
 
 ```javascript
-import { Trustmark } from '@contentauth/c2pa-node';
+import { Trustmark } from '@stardustproof/c2pa-node';
 
 // Create a trustmark instance
 const trustmark = await Trustmark.newTrustmark({
@@ -536,10 +540,10 @@ The library provides comprehensive settings management that can be configured pe
 
 #### Using a Context
 
-A `Context` (from [`c2pa-utilities`](../c2pa-utilities/README.md#context-and-settings), re-exported directly from `@contentauth/c2pa-node` so you don't need to add that package yourself) wraps `Settings` and is the recommended way to configure a `Reader` or `Builder`:
+A `Context` (from [`c2pa-utilities`](../c2pa-utilities/README.md#context-and-settings), re-exported directly from `@stardustproof/c2pa-node` so you don't need to add that package yourself) wraps `Settings` and is the recommended way to configure a `Reader` or `Builder`:
 
 ```javascript
-import { Reader, Builder, Context } from '@contentauth/c2pa-node';
+import { Reader, Builder, Context } from '@stardustproof/c2pa-node';
 
 const context = new Context({
   verify: {
@@ -571,7 +575,7 @@ const builder3 = await Builder.fromArchive(archiveAsset, context);
 Passing settings directly as a JSON string, or as a raw object matching the native settings shape (snake_case keys, no defaults applied), is deprecated and will be removed in a future major version — use a `Context` instead (above). `Builder.new`/`Builder.withJson` stay synchronous for this deprecated path; prefer their `newAsync`/`withJsonAsync` counterparts with a `Context` instead.
 
 ```javascript
-import { Reader, Builder } from '@contentauth/c2pa-node';
+import { Reader, Builder } from '@stardustproof/c2pa-node';
 
 // Create settings object
 const settings = {
@@ -611,7 +615,7 @@ import {
   settingsToJson,
   loadSettingsFromFile,
   loadSettingsFromUrl
-} from '@contentauth/c2pa-node';
+} from '@stardustproof/c2pa-node';
 
 // Create trust settings
 const trustSettings = createTrustSettings({

@@ -7,7 +7,7 @@
  * it.
  */
 
-import { Action, BuilderIntent, C2paReason } from '@contentauth/c2pa-types';
+import { Action, BuilderIntent, C2paReason } from '@stardustproof/c2pa-types';
 import { ManifestAndAssetBytes } from '../builder.js';
 import type {
   SerializableIdentityAssertion,

@@ -1,11 +1,11 @@
 # c2pa-utilities
 
-`c2pa-utilities` is a home for shared utilities and libraries used by both `c2pa-web` and `c2pa-node`. Most clients will get these transitively as a dependency of one of those two packages, but `@contentauth/c2pa-utilities` is also published standalone for cases where you want to reuse a piece of it directly.
+`c2pa-utilities` is a home for shared utilities and libraries used by both `c2pa-web` and `c2pa-node`. Most clients will get these transitively as a dependency of one of those two packages. This source line prepares `@stardustproof/c2pa-utilities` for the browser product; it does not attest a published VSI release.
 
 ## Installation
 
 ```sh
-npm install @contentauth/c2pa-utilities
+npm install @stardustproof/c2pa-utilities
 ```
 
 ## API reference documentation
@@ -25,7 +25,7 @@ See [`c2pa-web`'s README](../c2pa-web/README.md#configuring-behavior-with-contex
 #### Creating a `Context`
 
 ```typescript
-import { Context } from '@contentauth/c2pa-utilities';
+import { Context } from '@stardustproof/c2pa-utilities';
 
 const context = new Context({
   verify: {
@@ -42,7 +42,7 @@ const context = new Context({
 Each `Context` holds whatever single `Settings` object was passed to its constructor and does not handle any merging of settings. To combine more than one `Settings` source, merge them first with `mergeSettings()`, then construct a `Context` from the single, merged result:
 
 ```typescript
-import { Context, mergeSettings } from '@contentauth/c2pa-utilities';
+import { Context, mergeSettings } from '@stardustproof/c2pa-utilities';
 
 const base = { verify: { verifyTrust: true } };
 const override = { verify: { verifyAfterSign: true } };
@@ -72,7 +72,7 @@ import {
   createVerifySettings,
   mergeSettings,
   resolveSettings
-} from '@contentauth/c2pa-utilities';
+} from '@stardustproof/c2pa-utilities';
 
 const trustSettings = createTrustSettings({
   trustAnchors: 'https://example.com/anchors.pem'
@@ -105,7 +105,7 @@ Other exports:
 `fetchWithRetry` and `fetchWithRetryRaw` wrap `fetch` with exponential backoff, `Retry-After` handling, and (for `fetchWithRetry`) a response size cap. The retry mechanism is fixed; however, policy details such as retry count, backoff timing, which statuses/errors are retryable, and the maximum honored `Retry-After` delay are configurable per call via `FetchWithRetryOptions`.
 
 ```typescript
-import { fetchWithRetry, fetchWithRetryRaw } from '@contentauth/c2pa-utilities';
+import { fetchWithRetry, fetchWithRetryRaw } from '@stardustproof/c2pa-utilities';
 
 // GET as text, retrying on network errors, 429, and 5xx, capped at 1 MB by default.
 const text = await fetchWithRetry('https://example.com/anchors.pem');
@@ -139,7 +139,7 @@ An `AbortError` is never retried, and a malformed URL throws immediately rather 
 `validateAssetSize` is the shared size check used by both `Reader` implementations before reading an asset.
 
 ```typescript
-import { validateAssetSize, AssetTooLargeError, DEFAULT_MAX_SIZE_IN_BYTES } from '@contentauth/c2pa-utilities';
+import { validateAssetSize, AssetTooLargeError, DEFAULT_MAX_SIZE_IN_BYTES } from '@stardustproof/c2pa-utilities';
 
 try {
   validateAssetSize(sizeInBytes, maxSizeInBytes); // pass 0 to use DEFAULT_MAX_SIZE_IN_BYTES
@@ -152,7 +152,7 @@ try {
 
 ### Signing algorithm
 
-`SigningAlg` is the lowercase signing algorithm type accepted/produced by the core native library at the signer construction boundary (e.g. `Signer.newSigner(cert, key, alg)`). It's derived from the PascalCase `SigningAlg` exported by `@contentauth/c2pa-types`, which describes the casing used when a manifest's `SignatureInfo.alg` is serialized.
+`SigningAlg` is the lowercase signing algorithm type accepted/produced by the core native library at the signer construction boundary (e.g. `Signer.newSigner(cert, key, alg)`). It's derived from the PascalCase `SigningAlg` exported by `@stardustproof/c2pa-types`, which describes the casing used when a manifest's `SignatureInfo.alg` is serialized.
 
 ## Library development
 

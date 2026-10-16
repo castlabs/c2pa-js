@@ -11,7 +11,7 @@ import { test as baseTest } from 'vitest';
 import { type C2pa, createC2pa } from '../src/index.js';
 import { SetupWorker } from 'msw/browser';
 
-import wasmSrc from '@contentauth/c2pa-web/resources/c2pa.wasm?url';
+import wasmSrc from '@stardustproof/c2pa-web/resources/c2pa.wasm?url';
 import { worker } from './msw.js';
 
 interface TestWithC2paFixture {

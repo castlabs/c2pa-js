@@ -7,10 +7,10 @@
  * it.
  */
 
-import { Manifest, ManifestStore } from '@contentauth/c2pa-types';
+import { Manifest, ManifestStore } from '@stardustproof/c2pa-types';
 import type { C2pa } from './c2pa.js';
 import type { WorkerManager } from './worker/workerManager.js';
-import { Context, Settings, mergeSettings, validateAssetSize } from '@contentauth/c2pa-utilities';
+import { Context, Settings, mergeSettings, validateAssetSize } from '@stardustproof/c2pa-utilities';
 
 // 1 GB
 export const MAX_SIZE_IN_BYTES = 10 ** 9;

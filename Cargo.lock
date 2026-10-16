@@ -484,7 +484,7 @@ checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 [[package]]
 name = "c2pa"
 version = "0.92.0-dev"
-source = "git+https://github.com/mstattma/c2pa-rs?rev=5991ca1ff844f71946bd48424ab2977ee52e7226#5991ca1ff844f71946bd48424ab2977ee52e7226"
+source = "git+https://github.com/castlabs/c2pa-rs?rev=afd6fffe5a066e0b5b1a14f3f8c7ac189e7f0c95#afd6fffe5a066e0b5b1a14f3f8c7ac189e7f0c95"
 dependencies = [
  "asn1-rs",
  "async-generic",
@@ -524,6 +524,7 @@ dependencies = [
  "nom 7.1.3",
  "non-empty-string",
  "nonempty-collections",
+ "p256",
  "pem 4.0.0",
  "pkcs8",
  "png_pong",

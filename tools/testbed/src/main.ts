@@ -7,8 +7,8 @@
  * it.
  */
 
-import { createC2pa } from '@contentauth/c2pa-web';
-import wasmSrc from '@contentauth/c2pa-wasm/assets/c2pa_bg.wasm?url';
+import { createC2pa } from '@stardustproof/c2pa-web';
+import wasmSrc from '@stardustproof/c2pa-wasm/assets/c2pa_bg.wasm?url';
 
 const c2pa = await createC2pa({
   wasmSrc,

@@ -13,7 +13,7 @@ import {
   DEFAULT_SETTINGS,
   mergeSettings,
   settingsToJson,
-} from "@contentauth/c2pa-utilities";
+} from "@stardustproof/c2pa-utilities";
 
 import { loadSettingsFromFile, resolveSettingsForNeon } from "./Settings.js";
 

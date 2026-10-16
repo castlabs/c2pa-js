@@ -24,4 +24,4 @@ export type {
 } from './lib/signer.js';
 
 // Re-export types from c2pa-types for convenience.
-export type * from '@contentauth/c2pa-types';
+export type * from '@stardustproof/c2pa-types';

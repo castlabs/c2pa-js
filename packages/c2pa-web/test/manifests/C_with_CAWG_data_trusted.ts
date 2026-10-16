@@ -7,7 +7,7 @@
  * it.
  */
 
-import { ManifestStore } from '@contentauth/c2pa-types';
+import { ManifestStore } from '@stardustproof/c2pa-types';
 import { expect } from 'vitest';
 
 export default {

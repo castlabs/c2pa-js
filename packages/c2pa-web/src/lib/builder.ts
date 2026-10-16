@@ -22,8 +22,8 @@ import type {
   C2paReason,
   Ingredient,
   ManifestDefinition
-} from '@contentauth/c2pa-types';
-import { Context, mergeSettings, Settings } from '@contentauth/c2pa-utilities';
+} from '@stardustproof/c2pa-types';
+import { Context, mergeSettings, Settings } from '@stardustproof/c2pa-utilities';
 import type { C2pa } from './c2pa.js';
 
 /**

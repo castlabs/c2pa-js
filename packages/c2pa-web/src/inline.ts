@@ -8,7 +8,7 @@
  */
 
 import { createC2pa as createC2paBase, Config } from './lib/c2pa.js';
-import wasmB64 from '@contentauth/c2pa-wasm/c2pa.wasm?url&inline';
+import wasmB64 from '@stardustproof/c2pa-wasm/c2pa.wasm?url&inline';
 
 export type InlineConfig = Omit<Config, 'wasmSrc'>;
 

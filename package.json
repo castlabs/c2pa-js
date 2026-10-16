@@ -1,8 +1,9 @@
 {
-  "name": "@contentauth/source",
+  "name": "@stardustproof/source",
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
+    "source:check": "node tools/check-castlabs-source.mjs",
     "ci:check": "pnpm exec nx run-many -t lint test build --projects=tag:lib",
     "ci:release": "pnpm ci:prepublish && pnpm ci:publish",
     "ci:prepublish": "pnpm exec nx run-many -t build --projects=tag:lib",

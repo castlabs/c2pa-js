@@ -1,10 +1,10 @@
 {
-  "name": "@contentauth/c2pa-web",
+  "name": "@stardustproof/c2pa-web",
   "version": "0.15.3",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/contentauth/c2pa-js"
+    "url": "git+https://github.com/castlabs/c2pa-js"
   },
   "type": "module",
   "module": "./dist/index.js",
@@ -54,9 +54,9 @@
     }
   },
   "dependencies": {
-    "@contentauth/c2pa-types": "workspace:*",
-    "@contentauth/c2pa-utilities": "workspace:*",
-    "@contentauth/c2pa-wasm": "workspace:*",
+    "@stardustproof/c2pa-types": "workspace:*",
+    "@stardustproof/c2pa-utilities": "workspace:*",
+    "@stardustproof/c2pa-wasm": "workspace:*",
     "highgain": "^0.1.0"
   },
   "devDependencies": {

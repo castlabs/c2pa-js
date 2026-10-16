@@ -11,7 +11,7 @@
 // specific language governing permissions and limitations under
 // each license.
 
-// This file contains types not included in @contentauth/c2pa-types and not directly applicable to the neon generated code (index.node.d.ts)
+// This file contains types not included in @stardustproof/c2pa-types and not directly applicable to the neon generated code (index.node.d.ts)
 import { Buffer } from "buffer";
 import type {
   Action,
@@ -21,16 +21,16 @@ import type {
   Manifest,
   ManifestAssertionKind,
   ManifestStore,
-} from "@contentauth/c2pa-types";
-import type { SigningAlg } from "@contentauth/c2pa-utilities";
+} from "@stardustproof/c2pa-types";
+import type { SigningAlg } from "@stardustproof/c2pa-utilities";
 
 export type {
   Action,
   C2paReason,
   Ingredient,
   ManifestAssertionKind,
-} from "@contentauth/c2pa-types";
-export type { SigningAlg } from "@contentauth/c2pa-utilities";
+} from "@stardustproof/c2pa-types";
+export type { SigningAlg } from "@stardustproof/c2pa-utilities";
 
 export type ClaimVersion = 1 | 2;
 
@@ -536,7 +536,7 @@ import type {
   Settings as _Settings,
   TrustSettings as _TrustSettings,
   VerifySettings as _VerifySettings
-} from "@contentauth/c2pa-utilities";
+} from "@stardustproof/c2pa-utilities";
 
 /**
  * @deprecated Use `TrustSettings` instead, which encapsulates both normal trust and CAWG trust settings.

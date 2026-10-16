@@ -23,4 +23,4 @@ export {
 export { Trustmark } from "./Trustmark.js";
 export { isActionsAssertion } from "./assertions.js";
 export { loadSettingsFromFile } from "./Settings.js";
-export * from '@contentauth/c2pa-utilities';
+export * from '@stardustproof/c2pa-utilities';

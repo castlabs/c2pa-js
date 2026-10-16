@@ -1,11 +1,18 @@
-# CAI JavaScript library
+# Castlabs JavaScript Source Line
+
+This independent `@stardustproof` source branch prepares the browser SDK for the
+planned signer 1.0.8 VSI line. It is not a published or browser-qualified VSI
+implementation. See [Castlabs VSI source preparation](docs/castlabs-vsi/README.md)
+for exact inputs, the stateful validator API plan and player migration gates.
+The native Node package remains private and is not part of this product release.
+Upstream changelogs below the package directories retain their historical names.
 
 ## Overview
 
-The c2pa-js repository is a monorepo containing JavaScript libraries and tools for working with [C2PA metadata](https://c2pa.org/). It provides these libraries published for production use:
+The c2pa-js repository is a monorepo containing JavaScript libraries and tools for working with [C2PA metadata](https://c2pa.org/). This source line contains:
 
 - [**c2pa-web**](packages/c2pa-web/README.md): Library for C2PA metadata in the browser. Import and use this package in browser client JavaScript code.
-- [**c2pa-node**](packages/c2pa-node/README.md): Node.js library that can read and validate C2PA manifest data that is attached to media assets and add signed manifests to media assets.
+- [**c2pa-node**](packages/c2pa-node/README.md): Retained private Node.js source, outside the browser product release scope.
 
 Additionally, the repo contains these intermediate and internal libraries:
 

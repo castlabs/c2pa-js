@@ -218,7 +218,7 @@ jobs:
           tag="v$BUNDLE_VERSION"
           # Fail closed on API errors as well as existing tags, including drafts.
           gh api --paginate "repos/$GH_REPO/git/matching-refs/tags/$tag" --jq '.[].ref' > refs.txt
-          if [[ -s refs.txt ]]; then echo 'Tag already exists'; exit 1; fi
+          if grep -Fxq "refs/tags/$tag" refs.txt; then echo 'Tag already exists'; exit 1; fi
           gh api --paginate "repos/$GH_REPO/releases?per_page=100" --jq '.[].tag_name' > releases.txt
           if grep -Fxq "$tag" releases.txt; then echo 'Release already exists'; exit 1; fi
           gh release create "$tag" bundle/*.tgz bundle/provenance.json \

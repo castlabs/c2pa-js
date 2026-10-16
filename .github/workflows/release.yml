@@ -9,6 +9,7 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
   release:
+    if: github.repository == 'contentauth/c2pa-js'
     name: Release
     runs-on: ubuntu-24.04
     permissions:
@@ -38,7 +39,7 @@ jobs:
 
   publish-docs:
     needs: [release]
-    if: ${{ needs.release.outputs.published == 'true' }}
+    if: ${{ github.repository == 'contentauth/c2pa-js' && needs.release.outputs.published == 'true' }}
     permissions:
       contents: read
       pages: write

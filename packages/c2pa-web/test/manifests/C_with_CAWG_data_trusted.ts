@@ -48,6 +48,7 @@ export default {
               alg: 'Ed25519',
               cert_serial_number:
                 '638838410810235485828984295321338730070538954823',
+              common_name: 'C2PA Signer',
               issuer: 'C2PA Test Signing Cert',
               revocation_status: true
             },
@@ -95,13 +96,7 @@ export default {
   },
   validation_results: {
     activeManifest: {
-      failure: [
-        {
-          code: 'signingCredential.untrusted',
-          explanation: 'signing certificate untrusted',
-          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity'
-        }
-      ],
+      failure: [],
       informational: [
         {
           code: 'timeStamp.untrusted',
@@ -169,6 +164,12 @@ export default {
           url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/c2pa.hash.data'
         },
         {
+          code: 'signingCredential.trusted',
+          explanation:
+            'signing certificate trusted, found in System trust anchors',
+          url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity'
+        },
+        {
           code: 'cawg.identity.well-formed',
           explanation: 'CAWG X.509 identity signature valid',
           url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity'
@@ -176,12 +177,5 @@ export default {
       ]
     }
   },
-  validation_state: 'Valid',
-  validation_status: [
-    {
-      code: 'signingCredential.untrusted',
-      explanation: 'signing certificate untrusted',
-      url: 'self#jumbf=/c2pa/urn:c2pa:822f2ec0-ef27-4d95-88b4-74586c12873d/c2pa.assertions/cawg.identity'
-    }
-  ]
+  validation_state: 'Trusted'
 } satisfies ManifestStore;

@@ -205,9 +205,18 @@ only `contents: read`. No job publishes the draft or npm packages. Maintainers
 must review provenance and remaining CI before manually publishing; tarball
 dependency URLs are unavailable to normal consumers while the release is draft.
 
-Lightweight local checks (use an external `TMPDIR` on a disk-constrained machine):
+Lightweight local checks require a separate checkout of the approved immutable
+stable source commit, not the automation checkout (whose packages may still use
+`@contentauth`). For example, create a detached worktree at the approved source
+`8bdff3ca43591c830c12a0777a14e6f328db8f2c`; for a later approved source, use its
+full immutable commit SHA instead, never a moving branch name. Run these commands
+from the automation checkout with Node.js 22 or later and pnpm 10.15.0 available
+(use an external `TMPDIR` on a disk-constrained machine):
 
 ```sh
+git worktree add --detach "$HOME/opencode-worktrees/c2pa-js-stable-test-source" \
+  8bdff3ca43591c830c12a0777a14e6f328db8f2c
+export CASTLABS_TEST_SOURCE="$HOME/opencode-worktrees/c2pa-js-stable-test-source"
 node --check tools/castlabs-release.mjs
 node --check tools/castlabs-consumer-smoke.mjs
 node --test tools/castlabs-release.test.mjs
@@ -215,12 +224,17 @@ actionlint .github/workflows/castlabs-stable-bundle.yml
 actionlint .github/workflows/release.yml
 ```
 
-The Node tests pack synthetic prebuilt files with real pnpm and validate manifests,
-contents, hashes, SRI, immutable-source checks and rejection cases without a native
-build. They also test consumer-only overrides and install the synthetic internal
-tarballs without registry dependencies, checking local resolution and installed
-bytes. These fixtures do not qualify the real SDK or packaged browser behavior.
+`CASTLABS_TEST_SOURCE` must point to that exact stable checkout; the tests do not
+default to the automation root. They read its manifests and SDK-pinned lockfiles
+without modifying the checkout. The Node tests pack synthetic prebuilt files with
+real pnpm and validate manifests, contents, hashes, SRI, immutable-source checks
+and rejection cases without a native build. They also test consumer-only overrides
+and install the synthetic internal tarballs without registry dependencies, checking
+local resolution and installed bytes. These fixtures do not qualify the real SDK
+or packaged browser behavior.
 They create only disposable fixture git objects, not source-worktree commits.
+The workflow's release guard is also executed with mocked `gh` calls to check
+exact tag matching and fail-closed API errors, without contacting GitHub.
 
 ## License
 

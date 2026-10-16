@@ -9,7 +9,8 @@ import test from 'node:test';
 import { appendSri, pack, packages, releaseTag, sdkSha, stageManifest, verifySource } from './castlabs-release.mjs';
 import { consumerManifest, installConsumer, packagedBrowserCases, packagedBrowserScope, packagedCasesInBrowser } from './castlabs-consumer-smoke.mjs';
 
-const source = process.env.CASTLABS_TEST_SOURCE ?? fileURLToPath(new URL('../', import.meta.url));
+const source = process.env.CASTLABS_TEST_SOURCE;
+assert.ok(source, 'Set CASTLABS_TEST_SOURCE to a separate approved stable source checkout (see README)');
 const helper = fileURLToPath(new URL('./castlabs-release.mjs', import.meta.url));
 const manifest = directory => JSON.parse(readFileSync(join(source, 'packages', directory, 'package.json')));
 
@@ -140,6 +141,53 @@ test('workflow artifacts survive failed-job retries and inherited release jobs a
     manifest.runId = '1234';
     writeFileSync(join(temp, 'bundle', manifest.packages[0].file), 'tampered');
     assert.equal(verify(), 1);
+  } finally {
+    rmSync(temp, { recursive: true, force: true });
+  }
+});
+
+test('workflow rejects only exact existing tags/releases and fails closed on API errors', () => {
+  const workflow = readFileSync(new URL('../.github/workflows/castlabs-stable-bundle.yml', import.meta.url), 'utf8');
+  const script = workflow.split('      - name: Create a new draft release only (never overwrite a tag or release)\n        shell: bash\n        run: |\n')[1];
+  assert.ok(script);
+  const temp = mkdtempSync(join(tmpdir(), 'castlabs-publish-guard-'));
+  const refsCall = 'api --paginate repos/castlabs/c2pa-js/git/matching-refs/tags/v1.0.7';
+  const releasesCall = 'api --paginate repos/castlabs/c2pa-js/releases?per_page=100';
+  // A shell function intercepts every gh call; no credentials or GitHub access are used.
+  const mock = `gh() {
+    printf '%s %s %s\\n' "$1" "$2" "$3" >> "$GH_CALLS"
+    case "$1:$2:$3" in
+      api:--paginate:repos/castlabs/c2pa-js/git/matching-refs/tags/v1.0.7)
+        printf '%s\\n' "$MOCK_REFS"; return "$MOCK_REFS_STATUS" ;;
+      api:--paginate:repos/castlabs/c2pa-js/releases?per_page=100)
+        printf '%s\\n' "$MOCK_RELEASES"; return "$MOCK_RELEASES_STATUS" ;;
+      release:create:v1.0.7) return 0 ;;
+      *) return 99 ;;
+    esac
+  }`;
+  try {
+    for (const scenario of [
+      { name: 'no existing tags or releases', status: 0, calls: 3 },
+      { name: 'prefix matches only', refs: 'refs/tags/v1.0.7-rc.1\nrefs/tags/v1.0.70', releases: 'v1.0.7-rc.1\nv1.0.70', status: 0, calls: 3 },
+      { name: 'exact tag among prefix matches', refs: 'refs/tags/v1.0.7-rc.1\nrefs/tags/v1.0.7\nrefs/tags/v1.0.70', status: 1, calls: 1 },
+      { name: 'existing release', releases: 'v1.0.7', status: 1, calls: 2 },
+      { name: 'tag API error with no output', refsStatus: 42, status: 42, calls: 1 },
+      { name: 'tag API error after partial prefix output', refs: 'refs/tags/v1.0.70', refsStatus: 42, status: 42, calls: 1 },
+      { name: 'release API error', releasesStatus: 43, status: 43, calls: 2 }
+    ]) {
+      const callsFile = join(temp, 'gh-calls.txt');
+      writeFileSync(callsFile, '');
+      const result = spawnSync('bash', ['--noprofile', '--norc', '-e', '-o', 'pipefail', '-c', `${mock}\n${script}`], {
+        cwd: temp, encoding: 'utf8', env: {
+          ...process.env, GH_CALLS: callsFile, GH_REPO: 'castlabs/c2pa-js', BUNDLE_VERSION: '1.0.7', SOURCE_SHA: '1'.repeat(40),
+          MOCK_REFS: scenario.refs ?? '', MOCK_RELEASES: scenario.releases ?? '',
+          MOCK_REFS_STATUS: String(scenario.refsStatus ?? 0), MOCK_RELEASES_STATUS: String(scenario.releasesStatus ?? 0)
+        }
+      });
+      assert.equal(result.status, scenario.status, `${scenario.name}: ${result.stderr}`);
+      const calls = readFileSync(callsFile, 'utf8').trim().split('\n');
+      assert.deepEqual(calls, [refsCall, releasesCall, 'release create v1.0.7'].slice(0, scenario.calls), scenario.name);
+    }
   } finally {
     rmSync(temp, { recursive: true, force: true });
   }

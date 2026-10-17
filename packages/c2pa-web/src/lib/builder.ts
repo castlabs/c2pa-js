@@ -98,8 +98,12 @@ function getSerializableIdentityAssertions(
 
 // Module-level registry for garbage collection
 const registry = new FinalizationRegistry<{ worker: WorkerManager; id: number }>(
-  ({ worker, id }) => {
-    worker.tx.builder_free(id);
+  async ({ worker, id }) => {
+    try {
+      await worker.tx.builder_free(id);
+    } catch {
+      // GC cleanup is best-effort; the worker may already be disposed.
+    }
   }
 );
 

@@ -64,14 +64,14 @@ export class LiveVideoValidator {
   }
 
   /** Validate media in invocation order. Invalid media never resets continuity. */
-  validateSegment(segment: Blob): Promise<LiveVideoResult> {
+  async validateSegment(segment: Blob): Promise<LiveVideoResult> {
     if (this.#free) return Promise.reject(new Error('Live validator is freed'));
     validateAssetSize(segment.size, MAX_SIZE_IN_BYTES);
     return this.worker.tx.live_validateSegment(this.id, segment);
   }
 
   /** Reverify and atomically replace init/keys, retaining sequence/replay history. */
-  updateInit(format: string, init: Blob): Promise<LiveVideoResult> {
+  async updateInit(format: string, init: Blob): Promise<LiveVideoResult> {
     if (this.#free) return Promise.reject(new Error('Live validator is freed'));
     validateAssetSize(init.size, MAX_SIZE_IN_BYTES);
     return this.worker.tx.live_updateInit(this.id, format, init);

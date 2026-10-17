@@ -127,6 +127,10 @@ for (const mode of ['normal', 'inline', 'external']) {
           const wrongTrack = await handle.validateSegment(
             await fixture('wrong-track.m4s')
           );
+          const rejectedKeysRefresh = await handle.updateInit(
+            'video/mp4',
+            await fixture('mixed-keys-init.mp4')
+          );
           const corrupt = new Uint8Array(await two.arrayBuffer());
           corrupt[corrupt.length - 1] ^= 1;
           const tampered = await handle.validateSegment(new Blob([corrupt]));
@@ -184,6 +188,7 @@ for (const mode of ['normal', 'inline', 'external']) {
             replayId,
             wrongTime,
             wrongTrack,
+            rejectedKeysRefresh,
             tampered,
             second,
             gap,
@@ -237,6 +242,7 @@ for (const mode of ['normal', 'inline', 'external']) {
         'replayId',
         'wrongTime',
         'wrongTrack',
+        'rejectedKeysRefresh',
         'tampered',
         'invalidRefresh',
         'refreshPreservedReplay',
@@ -246,6 +252,9 @@ for (const mode of ['normal', 'inline', 'external']) {
       ] as const)
         expect(result[key].valid, key).toBe(false);
       expect(result.second.hadFailures).toBe(true);
+      expect(
+        result.rejectedKeysRefresh.statuses.some((s: any) => s.kind === 'failure')
+      ).toBe(true);
       expect(
         result.second.statuses.every((s: any) => s.kind !== 'failure')
       ).toBe(true);

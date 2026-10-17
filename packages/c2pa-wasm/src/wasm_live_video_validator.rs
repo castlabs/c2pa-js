@@ -159,6 +159,7 @@ async fn verify_init(
 
 /// One logical stream/rendition observation with snapshotted verification policy.
 /// Callers must not mix unrelated streams, codecs or sample entries on refresh.
+/// Direct WASM consumers must serialize calls, including free, across async refresh.
 #[wasm_bindgen]
 pub struct WasmLiveVideoValidator {
     validator: LiveVideoValidator,

@@ -288,6 +288,9 @@ terminated. There is no per-operation cancellation that silently discards an
 already accepted segment. Explicit teardown is required; no GC finalizer is relied
 on for live validators.
 
+Direct WASM consumers bypass the worker queue and must serialize all calls on an
+object, including generated `free()`, across asynchronous init refresh.
+
 Resource policy: Blob adapters read complete bytes (the web layer retains its
 existing 1 GB per-asset ceiling). The SDK retains replay IDs for the current
 observation interval; this set grows with accepted media and has no wrapper cap.

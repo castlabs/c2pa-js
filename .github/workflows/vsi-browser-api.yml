@@ -60,6 +60,7 @@ jobs:
           pip install --only-binary=:all: tmp/c2pa_python-0.37.13.dev2-py3-none-manylinux_2_28_x86_64.whl cbor2 cryptography
           python tools/vsi-fixtures.py tmp/vsi-python-reference tmp/vsi-fixtures
       - name: Locked schema generation and browser packages
+        id: packages
         run: |
           mkdir -p packages/c2pa-types/schemas
           (cd packages/c2pa-types && cargo run --locked -p c2pa-types && node generate-ci.mjs && pnpm exec tsc)
@@ -70,7 +71,10 @@ jobs:
       - name: Existing fragment-offset regressions (unchanged)
         run: pnpm --dir packages/c2pa-web exec vitest run src/lib/reader.singleFile.spec.ts
       - name: Real Ed25519/ES256 browser and strict-CSP qualification
+        if: ${{ !cancelled() && steps.packages.outcome == 'success' }}
         run: |
+          # The inherited Vitest build plugin rewrites dist during fragment tests.
+          pnpm --dir packages/c2pa-web exec vite build
           openssl req -x509 -newkey rsa:2048 -nodes -keyout tmp/vsi-server.key -out tmp/vsi-server.crt -days 1 -subj /CN=localhost -addext subjectAltName=IP:127.0.0.1
           pnpm exec vite --config tools/vsi-vite.config.ts > tmp/vsi-server.log 2>&1 &
           SERVER_PID=$!

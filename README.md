@@ -250,7 +250,8 @@ The [`Castlabs VSI Bundle`](.github/workflows/castlabs-vsi-bundle.yml) workflow
 must be merged onto default `main` before manual dispatch is available. This is
 registration only: it does not move the legacy `main` product to bundle `1.0.8`
 or change SDK pins or package versions. Its pull-request triggers target only
-`feat/vsi-browser-api` and `ci/vsi-browser-bundle`, not this bootstrap PR to `main`.
+`feat/live-video-vsi`, `feat/vsi-browser-api` and `ci/vsi-browser-bundle`, not this
+bootstrap PR to `main`.
 
 After registration, select the maintainer-approved VSI release-candidate branch
 (currently `ci/vsi-browser-bundle`) with `--ref`, and supply its exact full HEAD

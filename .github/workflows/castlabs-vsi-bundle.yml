@@ -2,7 +2,7 @@ name: Castlabs VSI Bundle
 
 on:
   pull_request:
-    branches: [feat/vsi-browser-api, ci/vsi-browser-bundle]
+    branches: [feat/live-video-vsi, feat/vsi-browser-api, ci/vsi-browser-bundle]
   workflow_dispatch:
     inputs:
       source_sha:

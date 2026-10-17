@@ -244,6 +244,34 @@ They create only disposable fixture git objects, not source-worktree commits.
 The workflow's release guard is also executed with mocked `gh` calls to check
 exact tag matching and fail-closed API errors, without contacting GitHub.
 
+## Castlabs VSI Bundle
+
+The [`Castlabs VSI Bundle`](.github/workflows/castlabs-vsi-bundle.yml) workflow
+must be merged onto default `main` before manual dispatch is available. This is
+registration only: it does not move the legacy `main` product to bundle `1.0.8`
+or change SDK pins or package versions. Its pull-request triggers target only
+`feat/vsi-browser-api` and `ci/vsi-browser-bundle`, not this bootstrap PR to `main`.
+
+After registration, select the maintainer-approved VSI release-candidate branch
+(currently `ci/vsi-browser-bundle`) with `--ref`, and supply its exact full HEAD
+SHA. That ref must contain the workflow, all VSI release helpers and release
+inputs; both jobs check out that source SHA. Helpers are intentionally not
+duplicated on `main`. For an explicitly approved build-only run:
+
+```sh
+gh workflow run castlabs-vsi-bundle.yml --repo castlabs/c2pa-js \
+  --ref ci/vsi-browser-bundle \
+  -f source_sha=<full-approved-vsi-release-branch-head-sha> \
+  -f bundle_version=1.0.8 -F publish=false
+```
+
+Never select `--ref main` for VSI `1.0.8`. Dispatch rejects a `source_sha` that
+differs from the selected ref's commit (`GITHUB_SHA`); if the branch advances,
+review its new HEAD before dispatch. An active workflow ID alone does not prove
+default-branch registration. `publish=false` cannot create a release; a separately
+approved `publish=true` run still requires all qualification/readiness gates and
+can create only a new draft, never publish npm packages or a public release.
+
 ## License
 
 This project is licensed under the terms of the [MIT license](https://github.com/contentauth/c2pa-js-v2/blob/main/LICENSE).

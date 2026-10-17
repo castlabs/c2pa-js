@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "bundleVersion": "1.0.8",
+  "sdkSha": "afd6fffe5a066e0b5b1a14f3f8c7ac189e7f0c95",
+  "releaseReady": false,
+  "sdkStatus": "pre-integration",
+  "qualifiedSdkSha": null,
+  "qualificationEvidence": [],
+  "sdkIntegration": {
+    "repository": "castlabs/c2pa-rs",
+    "targetRef": "feat/trusted-vsi-functional",
+    "requiredPRs": [27, 28, 29],
+    "mergeCommits": { "27": null, "28": null, "29": null },
+    "nativeQualification": null
+  },
+  "publicationBlocker": "The current SDK is the API development source, not the final 1.0.8 release pin. Await the owner's qualified integrated commit on feat/trusted-vsi-functional containing merged PRs 27/28/29, including the additional ZIP 9.0.4 security fix in PR 27. Do not substitute an individual PR head or the unqualified branch tip.",
+  "packages": {
+    "c2pa-types": "0.7.5",
+    "c2pa-wasm": "0.13.2",
+    "c2pa-utilities": "0.3.1",
+    "c2pa-web": "0.15.3"
+  },
+  "tools": { "wasmBindgen": "0.2.129", "binaryen": "124" },
+  "interopFixture": {
+    "pythonSha": "466707025658fd2fd5343d74b06f7081db09e64c",
+    "sdkSha": "afd6fffe5a066e0b5b1a14f3f8c7ac189e7f0c95",
+    "wheelVersion": "0.37.13.dev2",
+    "wheelSha256": "5b9a4bd5f56b0fdcd4dc27f42569524677505e0744b51566da7908c836ac0bfb"
+  }
+}

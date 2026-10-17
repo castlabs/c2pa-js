@@ -2,10 +2,14 @@
   "schemaVersion": 1,
   "bundleVersion": "1.0.8",
   "sdkSha": "6021100cc5060b06061ca15b634281cfeb97c718",
-  "releaseReady": false,
-  "sdkStatus": "pre-integration",
-  "qualifiedSdkSha": null,
-  "qualificationEvidence": [],
+  "releaseReady": true,
+  "sdkStatus": "qualified-functional",
+  "qualifiedSdkSha": "6021100cc5060b06061ca15b634281cfeb97c718",
+  "qualificationEvidence": [
+    "https://github.com/castlabs/c2pa-rs/actions/runs/39004446457",
+    "https://github.com/castlabs/c2pa-js/actions/runs/39006782520",
+    "https://github.com/castlabs/c2pa-js/actions/runs/39006953532"
+  ],
   "sdkIntegration": {
     "repository": "castlabs/c2pa-rs",
     "targetRef": "feat/trusted-vsi-functional",
@@ -21,7 +25,7 @@
       "workflowPath": ".github/workflows/castlabs-live-video-qualification.yml"
     }
   },
-  "publicationBlocker": "Integrated SDK candidate 6021100cc5060b06061ca15b634281cfeb97c718 contains merged PRs 27/28/29, including the ZIP 9.0.4 security fix in PR 27, but is not release-qualified. Await owner confirmation of native qualification run 39004446457 and all browser/package gates before enabling readiness. This run pointer and the merge identities are not qualification claims.",
+  "publicationBlocker": null,
   "packages": {
     "c2pa-types": "0.7.5",
     "c2pa-wasm": "0.13.2",

@@ -6,21 +6,26 @@ the actual types 0.7.5, WASM 0.13.2, utilities 0.3.1 and web 0.15.3 versions;
 the private Node package is excluded. Tarball dependencies use absolute
 `https://github.com/castlabs/c2pa-js/releases/download/v1.0.8/` URLs.
 
-## Publication Is Blocked
+## Qualified SDK Inputs
 
 The API source and release inputs pin the combined SDK candidate
 `6021100cc5060b06061ca15b634281cfeb97c718`, inherited from API commit
 `406ba20206eaa8db3dcfa9ea247d6dbb977963c4`. It contains merged SDK PRs
-27/28/29, including the ZIP 9.0.4 security fix in PR 27. It is **not yet
-release-qualified**. `releaseReady` remains false, `qualifiedSdkSha` remains
-null, and the input status remains `pre-integration` until owner-confirmed
-qualification of the integrated candidate. Native run `39004446457` is recorded
-as a qualification pointer, not a success claim. This preparation does not
-select an individual SDK PR head, edit SDK dependencies, merge SDK work, or
-authorize release execution.
+27/28/29, including the ZIP 9.0.4 security fix in PR 27. Exact-source native
+qualification [39004446457](https://github.com/castlabs/c2pa-rs/actions/runs/39004446457)
+passed on Linux and Windows. API qualification
+[39006782520](https://github.com/castlabs/c2pa-js/actions/runs/39006782520)
+and the first complete source/installed bundle qualification
+[39006953532](https://github.com/castlabs/c2pa-js/actions/runs/39006953532)
+also passed against this SDK. The inputs now record `releaseReady: true` and
+`sdkStatus: "qualified-functional"`. The final source must still pass the full
+workflow with this qualified input snapshot before a draft can be created.
+Readiness does not authorize public publication or claim a source-wide security
+audit. No individual SDK PR head is used as the release pin.
 
-After the merged SDK functional integration is qualified, the main integration owner must update the
-source pin, Cargo lock and this input manifest together. Readiness requires
+For any later SDK change, update the source pin, Cargo lock and this input
+manifest together, resetting readiness until that exact source is qualified.
+Readiness requires
 `releaseReady: true`, `sdkStatus: "qualified-functional"`, `qualifiedSdkSha`
 matching the new source pin, qualification evidence URLs, and a null publication
 blocker. `sdkIntegration` fixes the target to `feat/trusted-vsi-functional` and
@@ -75,8 +80,9 @@ Python/SDK build is used to generate fixtures.
   job along with exact source/profile/readiness. Provenance is unsigned, not
   a cryptographic attestation or reproducible-build claim.
 
-PRs targeting `feat/vsi-browser-api` or the release preparation branch exercise
-build-only gates using the PR head, not GitHub's synthetic merge commit.
+PRs targeting `feat/live-video-vsi`, `feat/vsi-browser-api` or the release
+preparation branch exercise build-only gates using the PR head, not GitHub's
+synthetic merge commit.
 Manual dispatch requires a full `source_sha` equal to the selected workflow
 ref's SHA, `bundle_version: 1.0.8`, and defaults to `publish: false`.
 

@@ -2,7 +2,7 @@ name: Castlabs VSI Bundle
 
 on:
   pull_request:
-    branches: [feat/vsi-browser-api, ci/vsi-browser-bundle]
+    branches: [feat/live-video-vsi, feat/vsi-browser-api, ci/vsi-browser-bundle]
   workflow_dispatch:
     inputs:
       source_sha:
@@ -15,7 +15,7 @@ on:
         default: '1.0.8'
         type: string
       publish:
-        description: Create a NEW draft only, after qualified SDK main inputs and all gates
+        description: Create a NEW draft only, after qualified merged SDK inputs and all gates
         default: false
         type: boolean
 

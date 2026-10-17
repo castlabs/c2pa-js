@@ -1,0 +1,87 @@
+name: VSI Browser API
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      CARGO_BUILD_JOBS: 2
+      CARGO_PROFILE_DEV_DEBUG: 0
+      CARGO_INCREMENTAL: 0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: castlabs/c2pa-python
+          ref: 466707025658fd2fd5343d74b06f7081db09e64c
+          path: tmp/vsi-python-reference
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: vsi-browser-api
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Source and queue/lifecycle regression gates
+        run: |
+          node tools/check-castlabs-source.mjs
+          pnpm exec vitest run --config tools/vsi-unit.config.ts
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install hash-pinned published fixture generator (no native build)
+        run: |
+          curl -fL https://github.com/castlabs/c2pa-python/releases/download/castlabs-v0.37.13.dev2/c2pa_python-0.37.13.dev2-py3-none-manylinux_2_28_x86_64.whl -o tmp/c2pa_python-0.37.13.dev2-py3-none-manylinux_2_28_x86_64.whl
+          printf '%s  %s\n' 5b9a4bd5f56b0fdcd4dc27f42569524677505e0744b51566da7908c836ac0bfb tmp/c2pa_python-0.37.13.dev2-py3-none-manylinux_2_28_x86_64.whl | sha256sum -c -
+          pip install --only-binary=:all: tmp/c2pa_python-0.37.13.dev2-py3-none-manylinux_2_28_x86_64.whl cbor2 cryptography
+          python tools/vsi-fixtures.py tmp/vsi-python-reference tmp/vsi-fixtures
+      - name: Locked WASM build (no Nx executor or cache deletion)
+        run: cargo build --locked -p c2pa-wasm --target wasm32-unknown-unknown
+      - name: Generate and verify real wasm-bindgen exports
+        run: |
+          curl -fL https://github.com/wasm-bindgen/wasm-bindgen/releases/download/0.2.129/wasm-bindgen-0.2.129-x86_64-unknown-linux-musl.tar.gz -o tmp/wasm-bindgen.tar.gz
+          tar -xzf tmp/wasm-bindgen.tar.gz -C tmp
+          tmp/wasm-bindgen-0.2.129-x86_64-unknown-linux-musl/wasm-bindgen dist/target/wasm32-unknown-unknown/debug/c2pa_wasm.wasm --out-dir packages/c2pa-wasm/pkg --out-name c2pa --target web --omit-default-module-path
+          node tools/vsi-bindings.mjs
+      - name: Locked schema generation and browser packages
+        run: |
+          mkdir -p packages/c2pa-types/schemas
+          (cd packages/c2pa-types && cargo run --locked -p c2pa-types && node generate-ci.mjs && pnpm exec tsc)
+          pnpm --dir packages/c2pa-utilities exec tsc --project tsconfig.lib.json
+          pnpm --dir packages/c2pa-web exec vite build
+      - name: Install supported browsers
+        run: pnpm --dir packages/c2pa-web exec playwright install --with-deps chromium firefox webkit
+      - name: Existing fragment-offset regressions (unchanged)
+        run: pnpm --dir packages/c2pa-web exec vitest run src/lib/reader.singleFile.spec.ts
+      - name: Real Ed25519/ES256 browser and strict-CSP qualification
+        run: |
+          openssl req -x509 -newkey rsa:2048 -nodes -keyout tmp/vsi-server.key -out tmp/vsi-server.crt -days 1 -subj /CN=localhost -addext subjectAltName=IP:127.0.0.1
+          pnpm exec vite --config tools/vsi-vite.config.ts > tmp/vsi-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID"' EXIT
+          for attempt in $(seq 1 60); do curl -fk https://127.0.0.1:4173/tools/vsi.html && break; sleep 1; done
+          pnpm --dir packages/c2pa-web exec playwright test --config playwright.vsi.config.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vsi-browser-api-evidence
+          path: |
+            tmp/vsi-fixtures
+            tmp/vsi-playwright-report
+            tmp/vsi-server.log
+            packages/c2pa-wasm/pkg/c2pa.d.ts
+            packages/c2pa-wasm/pkg/c2pa_bg.wasm

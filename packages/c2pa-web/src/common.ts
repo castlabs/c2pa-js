@@ -12,6 +12,8 @@ export type { Config, C2pa } from './lib/c2pa.js';
 export type { ManifestAndAssetBytes, BuilderFactory } from './lib/builder.js';
 
 export type { FragmentOptions, ReaderFactory } from './lib/reader.js';
+export { LiveVideoValidator } from './lib/liveVideoValidator.js';
+export type { LiveVideoResult, LiveVideoStatus, SequenceCoverage } from './lib/liveVideoValidator.js';
 
 export type {
   Signer,

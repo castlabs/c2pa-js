@@ -19,6 +19,9 @@ pub mod stream;
 /// Exposes a reader API to JS via wasm-bindgen.
 pub mod wasm_reader;
 
+/// Stateful, trusted section 19.4 live-video validation.
+pub mod wasm_live_video_validator;
+
 /// Exposes a builder API to JS via wasm-bindgen.
 pub mod wasm_builder;
 

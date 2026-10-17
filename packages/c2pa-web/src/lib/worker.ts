@@ -9,7 +9,9 @@
 
 /// <reference lib="webworker" />
 
-import { WasmReader, initSync, WasmBuilder } from '@stardustproof/c2pa-wasm';
+import { WasmReader, initSync, WasmBuilder, WasmLiveVideoValidator } from '@stardustproof/c2pa-wasm';
+import { createLiveValidatorMap } from './worker/liveValidatorMap.js';
+import type { LiveVideoResult, SequenceCoverage } from './liveVideoValidator.js';
 import { createWorkerObjectMap } from './worker/workerObjectMap.js';
 import { createWorkerTx, rx } from './worker/rpc.js';
 import { sanitizeManifestStore } from './worker/sanitizeManifestStore.js';
@@ -18,6 +20,7 @@ import { transfer } from 'highgain';
 
 const readerMap = createWorkerObjectMap<WasmReader>();
 const builderMap = createWorkerObjectMap<WasmBuilder>();
+const liveMap = createLiveValidatorMap<WasmLiveVideoValidator>();
 
 const tx = createWorkerTx();
 
@@ -51,6 +54,24 @@ rx(
   wrapFunctionsForErrorHandling({
     async initWorker(module) {
       initSync({ module });
+    },
+    async live_fromInit(format, init, contextJson) {
+      return liveMap.add(await WasmLiveVideoValidator.fromInitBlob(format, init, contextJson));
+    },
+    live_validateSegment(id, segment) {
+      return liveMap.run(id, value => value.validateSegmentBlob(segment) as LiveVideoResult);
+    },
+    live_updateInit(id, format, init) {
+      return liveMap.run(id, async value => await value.updateInitBlob(format, init) as LiveVideoResult);
+    },
+    live_resetContinuity(id) {
+      return liveMap.run(id, value => value.resetContinuity() as LiveVideoResult);
+    },
+    live_sequenceCoverage(id) {
+      return liveMap.run(id, value => value.sequenceCoverage() as SequenceCoverage);
+    },
+    live_free(id) {
+      return liveMap.free(id);
     },
     async reader_fromBlob(format, blob, contextJson) {
       const reader = await WasmReader.fromBlob(format, blob, contextJson);

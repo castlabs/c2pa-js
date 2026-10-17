@@ -11,6 +11,7 @@ import { CredentialHolder, Signer } from '../signer.js';
 import { createTx, workerRx } from './rpc.js';
 import InlineWorker from '../worker?worker&inline';
 import { transfer } from 'highgain';
+import { disposableTx } from './disposableTx.js';
 
 export interface WorkerManager {
   tx: ReturnType<typeof createTx>;
@@ -62,7 +63,16 @@ export async function createWorkerManager(
     ? new Worker(validateWorkerSrc(workerSrc), { type: 'module' })
     : new InlineWorker();
 
-  const tx = createTx(worker);
+  const managed = disposableTx(createTx(worker));
+  const { tx } = managed;
+  const terminate = () => {
+    managed.stop();
+    signingRequestMap.clear();
+    credentialHolderRequestMap.clear();
+    worker.terminate();
+  };
+  worker.addEventListener('error', () => terminate());
+  worker.addEventListener('messageerror', () => terminate());
 
   const signingRequestMap = new Map<number, Signer['sign']>();
   const credentialHolderRequestMap = new Map<number, CredentialHolder['sign']>();
@@ -108,12 +118,17 @@ export async function createWorkerManager(
     return id;
   }
 
-  await tx.initWorker(wasm);
+  try {
+    await tx.initWorker(wasm);
+  } catch (e) {
+    terminate();
+    throw e;
+  }
 
   return {
     tx,
     registerSignReceiver,
     registerCredentialHolderReceiver,
-    terminate: () => worker.terminate()
+    terminate
   };
 }

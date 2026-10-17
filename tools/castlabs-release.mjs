@@ -8,7 +8,7 @@ import {
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const sdkSha = '0aee9d318289ba4a5e0fe9e0fc1ddc59b0632f91';
+export const sdkSha = '9b1bc268f3e254abcb942969a8bb991365067717';
 export const packages = [
   { directory: 'c2pa-types', version: '0.4.3', output: 'dist', required: ['dist/index.d.ts'] },
   { directory: 'c2pa-wasm', version: '0.6.0', output: 'pkg', required: ['pkg/c2pa.js', 'pkg/c2pa.d.ts', 'pkg/c2pa_bg.wasm', 'pkg/c2pa_bg.wasm.d.ts'] },

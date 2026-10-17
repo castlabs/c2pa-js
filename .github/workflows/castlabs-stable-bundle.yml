@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       source_sha:
-        description: Full immutable c2pa-js commit SHA (must include stable SDK 0aee9d3)
+        description: Full immutable c2pa-js commit SHA (must include stable SDK 9b1bc268)
         type: string
         required: true
       bundle_version:
@@ -199,7 +199,7 @@ jobs:
           }
           assert.equal(manifest.sources.js.sha, process.env.SOURCE_SHA);
           assert.equal(manifest.sources.js.repository, 'https://github.com/castlabs/c2pa-js');
-          assert.equal(manifest.sources.sdk.sha, '0aee9d318289ba4a5e0fe9e0fc1ddc59b0632f91');
+          assert.equal(manifest.sources.sdk.sha, '9b1bc268f3e254abcb942969a8bb991365067717');
           assert.equal(manifest.workflowSha, process.env.GITHUB_WORKFLOW_SHA);
           assert.equal(manifest.runId, process.env.GITHUB_RUN_ID);
           assert.equal(manifest.bundleVersion, process.env.BUNDLE_VERSION);

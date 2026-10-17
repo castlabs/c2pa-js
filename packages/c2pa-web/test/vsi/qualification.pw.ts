@@ -422,7 +422,7 @@ for (const mode of ['normal', 'external']) {
             verify: { verifyAfterReading: true, verifyTrust: true, verifyTimestampTrust: true, ocspFetch: true }
           });
           const resolved = JSON.parse(await context.toJson());
-          resolved.core = { allowed_network_hosts: ['127.0.0.1'] };
+          resolved.core = { allowed_network_hosts: ['127.0.0.1:4173'] };
           const contextJson = JSON.stringify(resolved);
           const wasm = await WebAssembly.compile(await (await fetch('/packages/c2pa-wasm/pkg/c2pa_bg.wasm')).arrayBuffer());
           const create = () => w.api.createC2pa({ wasmSrc: wasm, ...(mode === 'external' ? {

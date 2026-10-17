@@ -9,6 +9,7 @@
 
 import { test, describe, expect } from 'test/methods.js';
 import { http, HttpResponse } from 'msw';
+import { merge } from 'ts-deepmerge';
 import { settingsToWasmJson } from './settings.js';
 
 describe('settings', () => {
@@ -20,6 +21,38 @@ describe('settings', () => {
         expect(settingsString).toEqual(
           JSON.stringify({ builder: { generate_c2pa_archive: true } })
         );
+      });
+
+      test.each([
+        '__proto__',
+        'constructor',
+        'prototype',
+        'toString',
+        'valueOf',
+        'hasOwnProperty',
+        'isPrototypeOf',
+        'propertyIsEnumerable',
+        'toLocaleString'
+      ])('should ignore unsafe merge key %s at every level', async (key) => {
+        const settings = JSON.parse(`{
+          "${key}": { "c2paMergePollution": true },
+          "builder": { "${key}": { "c2paMergePollution": true }, "generateC2paArchive": false },
+          "verify": { "verifyTrust": false },
+          "trust": { "${key}": { "c2paMergePollution": true }, "userAnchors": "anchors" }
+        }`);
+        // Serialization alone can hide an assignment to the __proto__ accessor.
+        const merged = merge(settings);
+        expect(Object.getPrototypeOf(merged)).toBe(Object.prototype);
+        expect(Object.getPrototypeOf(merged.builder)).toBe(Object.prototype);
+        expect(Object.getPrototypeOf(merged.trust)).toBe(Object.prototype);
+        expect(Object.prototype).not.toHaveProperty('c2paMergePollution');
+        const settingsString = await settingsToWasmJson(settings);
+
+        expect(JSON.parse(settingsString)).toEqual({
+          builder: { generate_c2pa_archive: false },
+          verify: { verify_trust: false },
+          trust: { user_anchors: 'anchors' }
+        });
       });
     });
 

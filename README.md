@@ -117,15 +117,23 @@ The manual workflow and its helpers must first be reviewed and merged onto
 the Castlabs repository's default branch before GitHub registers
 `workflow_dispatch`. An unshared local commit cannot be built by a hosted runner:
 the immutable JS source commit must also be present in `castlabs/c2pa-js`.
-The original repin is `ed584bff09dc3b76331b0e429a0256699d9e4e27` and changes
+Historical baseline: repin `ed584bff09dc3b76331b0e429a0256699d9e4e27` changed
 only `Cargo.toml` and `Cargo.lock` to SDK
-`0aee9d318289ba4a5e0fe9e0fc1ddc59b0632f91`. Use the approved reachable source
-SHA, not a branch name; checkout, SDK pin, package versions, and tracked-file
-cleanliness are checked before and after building. Workflow helpers come from
+`0aee9d318289ba4a5e0fe9e0fc1ddc59b0632f91`. The current security candidate pins
+stable SDK 0.80 at `9b1bc268f3e254abcb942969a8bb991365067717` (parser backport
+[SDK PR #30](https://github.com/castlabs/c2pa-rs/pull/30)), preserving the stable
+media API and package versions. Its approved immutable JS source SHA is pending
+source review and commit; the historical baseline is not a substitute.
+Use the approved reachable source SHA, not a branch name; checkout, SDK pin,
+package versions, and tracked-file cleanliness are checked before and after
+building. Workflow helpers come from
 the immutable dispatch workflow commit, separately from the requested source.
 Merging/pushing and triggering this workflow require separate maintainer approval.
 
-After registration and source availability, the build-only command is:
+**Stable publication and manual build dispatch remain blocked.** The 1.0.8
+release takes priority; this source PR is reviewable preparation, not approval
+to build or publish a stable bundle. After separate explicit approval,
+registration and source availability, the future build-only command is:
 
 ```sh
 gh workflow run castlabs-stable-bundle.yml --repo castlabs/c2pa-js \
@@ -166,6 +174,14 @@ checks SRI and compiles WASM, then typechecks consumer imports including
 `c2pa-types`. It does not use workspace aliases or source imports. Diagnostics
 include the consumer manifest, lockfile, dependency graph and result.
 
+TypeScript consumers of the generated wasm-bindgen declarations need
+`ESNext.Disposable` in `compilerOptions.lib` for `[Symbol.dispose]`, alongside their
+existing libraries (the probe uses `ES2023,DOM,ESNext.Disposable`). This adds type
+declarations only; it does not change the ES runtime target or provide a polyfill.
+
+Historical build run `38903762084` failed this installed-consumer typecheck with
+TS2550 before any packaged-browser cases ran (zero cases, not a browser pass).
+
 The same installed consumer is served by Vite on loopback without workspace aliases
 or repository Vite configuration. Playwright uses the repository's installed
 `@playwright/test` from `packages/c2pa-web`; no consumer browser tooling is installed.
@@ -182,10 +198,8 @@ page error fails qualification. All three browsers are attempted, and packaged
 checks still run after source-suite failures without replacing those results.
 
 Full web suites run sequentially in Chromium, Firefox and WebKit. Any nonzero
-result blocks release creation; the known stable baseline's seven Chromium and
-six Firefox failures are **not** an allowlist. Old report-array fixtures require
-a separate user decision, not an unrelated snapshot update here. Failed runs
-can still supply diagnostic/build-only tarballs; they are not qualified releases.
+result blocks release creation. Failed runs can still supply diagnostic/build-only
+tarballs; they are not qualified releases.
 The gate does not replace inherited Rust/WASM tests or lint CI, which remain
 separate. The only inherited publishing-workflow change is the upstream repository
 guard; the manual workflow calls no npm publishing command and assumes no npm secrets.
@@ -194,9 +208,12 @@ Provenance starts with `packagedBrowserQualification` marked `not-run`, not pass
 The consumer hook sets it from actual browser-command results; publication checks
 all three zero exits and all nine successful cases per browser, matching the packed
 asset hashes. A boolean success flag alone is insufficient. This targeted packaged
-suite complements, and does not replace, the full source-browser gate. The hosted
-pipeline is implemented but has not been qualified end-to-end locally: complete
-WASM build outputs are unavailable here and no new native build was attempted.
+suite complements, and does not replace, the full source-browser gate. Hosted run
+`38907039067` passed both gates for source `c9155528bfea2a61bf388c97e5ed809eeb660aaa`.
+That historical run used the old SDK, not the current security candidate.
+Those artifacts remain unpublished. Functional qualification is separate from
+security clearance: the [stable bundle security assessment](tools/castlabs-stable-security.md)
+records subsequent dependency fixes, regression checks and remaining release blockers.
 
 Only an explicitly approved rerun with `publish=true` and all gates green will let a
 separate `contents: write` job create a **new draft** GitHub release at the source
@@ -206,16 +223,17 @@ must review provenance and remaining CI before manually publishing; tarball
 dependency URLs are unavailable to normal consumers while the release is draft.
 
 Lightweight local checks require a separate checkout of the approved immutable
-stable source commit, not the automation checkout (whose packages may still use
-`@contentauth`). For example, create a detached worktree at the approved source
-`8bdff3ca43591c830c12a0777a14e6f328db8f2c`; for a later approved source, use its
-full immutable commit SHA instead, never a moving branch name. Run these commands
-from the automation checkout with Node.js 22 or later and pnpm 10.15.0 available
+stable source commit pinned to SDK `9b1bc268f3e254abcb942969a8bb991365067717`,
+not the automation checkout (whose packages may still use `@contentauth`). The
+approved source SHA is pending this source candidate's review and commit; use
+its full immutable SHA when approved, never a historical pin or moving branch.
+Run these commands from the automation checkout with Node.js 22 or later and
+pnpm 10.15.0 available
 (use an external `TMPDIR` on a disk-constrained machine):
 
 ```sh
 git worktree add --detach "$HOME/opencode-worktrees/c2pa-js-stable-test-source" \
-  8bdff3ca43591c830c12a0777a14e6f328db8f2c
+  "<full-approved-js-commit-sha>"
 export CASTLABS_TEST_SOURCE="$HOME/opencode-worktrees/c2pa-js-stable-test-source"
 node --check tools/castlabs-release.mjs
 node --check tools/castlabs-consumer-smoke.mjs

@@ -48,12 +48,12 @@
     "@stardustproof/c2pa-types": "workspace:*",
     "@stardustproof/c2pa-wasm": "workspace:*",
     "highgain": "^0.1.0",
-    "ts-deepmerge": "^7.0.3"
+    "ts-deepmerge": "^8.0.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
     "@types/ssri": "^7.1.5",
-    "@vitest/browser": "^3.2.4",
+    "@vitest/browser": "^3.2.7",
     "msw": "^2.12.1",
     "rimraf": "^6.0.1",
     "typedoc": "^0.28.12",

@@ -17,9 +17,12 @@ does not qualify these sources or their future packaged artifacts.
 - Bind the web Vite server, Vitest browser API, and testbed dev/preview servers
   to `127.0.0.1`. Do not enable the separate, default-disabled Vitest main API.
 
-The SDK remains pinned to `afd6fffe`; Cargo inputs, package versions and VSI API
-exports are unchanged. The VSI lock already contains lopdf 0.45 and quick-xml
-0.41; stable-line parser changes are not imported here.
+In that security change the SDK remained pinned to `afd6fffe`; Cargo inputs,
+package versions and VSI API exports were unchanged. The later browser API
+candidate uses the combined merged `6021100...` SDK with ZIP 9.0.4; see the
+README's source identity and qualification gates. This historical assessment
+does not qualify the newer consumer. The VSI lock already contains lopdf 0.45
+and quick-xml 0.41; stable-line parser changes are not imported here.
 The retained private Node package's separate development-tool versions are not
 upgraded by this browser-only change.
 

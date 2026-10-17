@@ -1,8 +1,9 @@
-# Castlabs VSI Source Preparation
+# Castlabs VSI Browser API
 
-Status: source preparation only, aligned with the planned signer **1.0.8** line.
-No new npm release, WASM build, browser VSI validation or player integration is
-attested here. Enabling a Rust feature does not export its APIs through WASM.
+Status: browser API implementation, aligned with the planned signer **1.0.8**
+native source. Qualification is recorded by the separate `VSI Browser API` CI
+workflow, not inferred from source or native tests. No npm release or player
+integration is approved by this change.
 
 ## Source Identity
 
@@ -10,29 +11,35 @@ attested here. Enabling a Rust feature does not export its APIs through WASM.
 | ------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
 | JS base and initial branch HEAD | `e98075e3dd1fb2b14a7048b15bd6368f8beacb13` | Independent `feat/castlabs-live-video-vsi`; retains the fragment-offset work, not the older stable implementation    |
 | SDK repository                  | `https://github.com/castlabs/c2pa-rs`      | Canonical Castlabs fork, not the earlier personal preparation fork                                                   |
-| SDK revision                    | `afd6fffe5a066e0b5b1a14f3f8c7ac189e7f0c95` | Immutable source commit, SDK `0.92.0-dev`; planned 1.0.8 native source, not an approved immutable dependency release |
+| Browser SDK candidate           | `6021100cc5060b06061ca15b634281cfeb97c718` | Final merged SDK `0.92.0-dev` candidate containing SDK PRs 27/28/29, including ZIP 9.0.4; not an approved dependency release |
 | Rust floor                      | `1.96.0`                                   | Existing JS workspace floor, matching the SDK                                                                        |
 | Feature                         | `unstable_live_video`                      | Confirmed in this SDK's `sdk/Cargo.toml`; experimental API, not a browser capability claim                           |
 
-Selection was checked on 2026-10-16 against the current preparation worktrees,
-read-only:
+The browser candidate was advanced on 2026-10-17 only after all three SDK PRs
+merged: PR 27 at `6ce147fb443b44d356a00d72b58e5ff3a7bbd401`, PR 28 at
+`7a1559dfbc2a0064c1e65d66a11d32ba35d5f78e`, and PR 29 at the final `6021100...`
+selection above. ZIP 9.0.4 is part of that combined selection, not a separately
+cherry-picked security head. The public validator signatures are unchanged;
+the repeated-producer correction is signing-side work, not a new browser API.
 
-- `stardustproof-c2pa-signer-release-108/docs/release-1.0.8-preparation.md`
-  still identifies `afd6fffe...` as the planned native for pending Python
-  `0.37.13.dev2` / `castlabs-v0.37.13.dev2`.
-- `c2pa-python-release-dev2/release/castlabs-vsi-inputs.lock.json` names the same
-  full native revision and SDK version. Its native feature list includes
-  `unstable_live_video`.
-- The signer's currently qualified older source remains Python `97c820ef...`
-  with Rust `a6d4cdcc...`; its committed Python declaration is still
-  `0.37.13.dev0`. These are not substituted for the planned source pin, and
-  historical Python/native release facts do not qualify this JS branch.
+The JS-owned lockfile moves ZIP from 8.6.0 to 9.0.4 and adds its required
+`nix 0.31.3` dependency. Other locked versions, including wasm-bindgen 0.2.129,
+are retained; this is not a general dependency refresh.
 
-There was no newer approved immutable dependency selection in those inputs.
-The SDK manifest difference from the prior JS pin `5991ca1f...` adds the
-live-video feature and optional `p256` dependency. `Cargo.lock` changes only the
-SDK source identity and adds its edge to the already locked `p256 0.13.2`;
-unrelated dependencies and package versions are not refreshed.
+Release remains blocked until the exact-source Linux and Windows native
+[qualification run 39004446457](https://github.com/castlabs/c2pa-rs/actions/runs/39004446457)
+passes both targets. That run has publication disabled. Browser source and
+interoperability qualification are separate gates and do not authorize a release.
+
+Historical source preparation first moved from `5991ca1f...` to
+`afd6fffe5a066e0b5b1a14f3f8c7ac189e7f0c95`, enabling `unstable_live_video` and
+its already locked `p256` edge. The published Python `0.37.13.dev2` generator
+still embeds that older `afd6fffe...` SDK. Its immutable release input lock,
+wheel evidence and loaded native-library hash remain frozen and checked; they
+must not be rewritten to claim that the published generator contains `6021100...`.
+Current browser tests therefore measure old-generator/new-consumer interoperability,
+not signer 1.0.8 product qualification. JS package versions, feature selections and
+the wasm-bindgen 0.2.129 bindings/CLI alignment are retained.
 
 ## Product Boundary
 
@@ -58,12 +65,12 @@ reinterpret `fragmentBaseOffset` as a live-video capability.
 
 ## Required Validator
 
-The next implementation must own a Rust `c2pa::live_video::LiveVideoValidator`
+The implementation owns a Rust `c2pa::live_video::LiveVideoValidator`
 for each logical stream/rendition observation, not construct a new validator for
 each media segment. An init Reader by itself is not a live validator.
 
 These public SDK methods were inspected at the full pinned revision in
-[`sdk/src/live_video/mod.rs`](https://github.com/castlabs/c2pa-rs/blob/afd6fffe5a066e0b5b1a14f3f8c7ac189e7f0c95/sdk/src/live_video/mod.rs):
+[`sdk/src/live_video/mod.rs`](https://github.com/castlabs/c2pa-rs/blob/6021100cc5060b06061ca15b634281cfeb97c718/sdk/src/live_video/mod.rs):
 
 | SDK method                         | Responsibility                                                                                                     |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
@@ -113,11 +120,10 @@ The SDK retains only the new manifest/key context, not old DVR epochs; route old
 media to its retained independently trusted context without claiming global
 continuity across separately created validators.
 
-### Proposed Public Surface
+### Public Surface
 
-The names below are a design contract for the next implementation, **not exports
-available in this branch**. Final signatures and generated types require compile
-and browser tests.
+The names below are implemented. WASM declarations are generated by wasm-bindgen
+in CI, not hand-maintained. Browser result types are owned by the web package.
 
 | Layer      | Proposed method                                                                                                          | Implementation boundary                                                           |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
@@ -228,3 +234,108 @@ wrong manifest/track/time, tampered media, sequence/replay/gaps, atomic refresh
 failure and success, seek reset, concurrency and free. Include actual signer
 1.0.8 candidate artifacts with honest provenance and the supported browser matrix.
 Release and player qualification remain separate from this source preparation.
+
+## Using The API
+
+```ts
+import { createC2pa, Context, LiveVideoValidator } from '@stardustproof/c2pa-web';
+
+const c2pa = await createC2pa({ wasmSrc });
+const validator = await LiveVideoValidator.fromInit(
+  c2pa, 'video/mp4', signedInit, new Context(trustedSettings)
+);
+try {
+  const result = await validator.validateSegment(media);
+  // result.valid is this operation only; result.hadFailures is sticky.
+  console.log(result.valid, result.statuses, result.sequenceCoverage);
+  const refresh = await validator.updateInit('video/mp4', replacementSignedInit);
+  if (!refresh.valid) throw new Error(refresh.error ?? 'Trusted init refresh failed');
+  // Admit media from the new context only after the awaited refresh is valid.
+  const renewed = await validator.validateSegment(newContextMedia);
+  console.log(renewed.valid, renewed.statuses);
+} finally {
+  await validator.free();
+  c2pa.dispose();
+}
+```
+
+`fromInit` rejects without publishing a handle unless complete Reader verification
+has detailed trusted active-manifest results, a successful BMFF binding and one
+unambiguous v3 BMFF hash/session-keys assertion. Verification must be enabled for
+reading, claim trust and timestamp trust; the wrapper rejects disabled settings
+instead of overriding them. `strictV1Validation: true` is also rejected because it
+selects legacy result reporting. The first certificate in the verified Reader's
+PEM chain is the claim signing leaf (the SDK verifies with `certs[0]`). All keys,
+including their session-signed certificate bindings, must validate. A valid subset
+does not admit the handle.
+
+`validateSegment`, `updateInit` and `resetContinuity` return `LiveVideoResult`:
+`{ valid, statuses, error?, sequenceCoverage, hadFailures }`. Statuses preserve
+SDK codes and have `kind`, `code`, `label`, `description`, and optional `error`,
+`ingredientUri`, `trustListUri`. Diagnostics are fresh for each operation.
+`sequenceCoverage()` returns `{ missingRanges, totalMissing, rangesTruncated }`;
+each inclusive range is `[start, end]`, with both endpoints and `totalMissing`
+encoded as decimal strings. Gaps are informational, not signature failures.
+
+Each validator belongs to exactly one logical stream/rendition observation. The
+caller MUST establish logical-stream identity and equivalent codec/sample entries
+before `updateInit`; native track/timing equality is not an identity check. A new
+Period, codec, rendition or unrelated stream needs a separate validator. Refresh
+does not retain old DVR manifest/key epochs. Keep independently admitted handles
+for those epochs and do not claim cross-handle continuity. Never automatically
+reset on invalid media, retry, playlist discontinuity or refresh. Trusted playback
+control may explicitly call `resetContinuity` after a seek/live join; coverage and
+`hadFailures` survive. Drop obsolete UI responses using the player's observation
+generation, not by resetting cryptographic state.
+
+CLI timeline/schedule JSON is unsigned trusted-operator input, not a new SDK trust
+or automatic context-update primitive. The caller must authorize the schedule,
+order the transition, await `updateInit`, require `valid === true`, and only then
+submit the new context's media. If refresh rejects or returns invalid, retain the
+old context and do not admit new-context media through a fallback validator or an
+automatic continuity reset. There is no additional timeline API in this wrapper.
+
+All per-validator RPCs are queued at receipt, including refresh awaits, coverage,
+reset and free. `free()` immediately closes admission, drains accepted work, then
+releases native state; repeated free returns the same promise. Use-after-free or
+stale IDs reject. Different validators can progress independently. `dispose()` is
+abrupt cancellation: all pending/future RPC promises reject and the worker is
+terminated. There is no per-operation cancellation that silently discards an
+already accepted segment. Explicit teardown is required; no GC finalizer is relied
+on for live validators.
+
+Direct WASM consumers bypass the worker queue and must serialize all calls on an
+object, including generated `free()`, across asynchronous init refresh.
+
+Resource policy: Blob adapters read complete bytes (the web layer retains its
+existing 1 GB per-asset ceiling). The SDK retains replay IDs for the current
+observation interval; this set grows with accepted media and has no wrapper cap.
+Coverage retains at most 1024 ranges and exposes truncation. Callers must bound
+worker/session lifetimes for their workload, free objects on teardown and never
+silently reset continuity just to reclaim replay memory. A worker retains small
+free-promise tombstones until disposal so duplicate free stays idempotent.
+
+## API Qualification
+
+The dedicated workflow builds only in CI, with `cargo build --locked`, then uses
+the matching wasm-bindgen CLI and asserts the generated live exports. It tests
+real Ed25519 and ES256 session/binding/media signatures in Chromium, Firefox and
+WebKit, using normal and inline web entrypoints and an external worker under a
+CSP that forbids `blob:` workers. Byte-only WASM admission/media are exercised
+separately. Queue/dispose unit mocks and the unchanged fragment-offset suite are
+separate gates, not substitutes for real crypto.
+
+Fixture generation uses the published Python `0.37.13.dev2` Linux wheel, SHA-256
+`5b9a4bd5f56b0fdcd4dc27f42569524677505e0744b51566da7908c836ac0bfb`, Python
+source `466707025658fd2fd5343d74b06f7081db09e64c`, and generator SDK
+`afd6fffe5a066e0b5b1a14f3f8c7ac189e7f0c95`, deliberately distinct from the
+current browser consumer candidate `6021100cc5060b06061ca15b634281cfeb97c718`.
+It uses test-only root trust and deterministic session keys (Ed25519 seed byte
+7, ES256 scalar 7). Init/key bindings and media use real signatures, with no
+disabled-trust admission helper. Fixtures and their per-run hashes/provenance are
+uploaded with CI evidence. These are newly generated API fixtures, not signer
+1.0.8 product qualification or a relabeling of the historical 1.0.4dev2 corpus.
+
+The API PR is stacked on `fix/vsi-browser-security` so it excludes security PR
+12's changes from review. Retarget it to `feat/live-video-vsi` only after the
+security PR merges, preserving the fixed SDK selection and security floors.

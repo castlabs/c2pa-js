@@ -18,7 +18,11 @@ export const MAX_SIZE_IN_BYTES = 10 ** 9;
 // Module-level registry for garbage collection
 const registry = new FinalizationRegistry<{ worker: WorkerManager; id: number }>(
   async ({ worker, id }) => {
-    await worker.tx.reader_free(id);
+    try {
+      await worker.tx.reader_free(id);
+    } catch {
+      // GC cleanup is best-effort; the worker may already be disposed.
+    }
   }
 );
 

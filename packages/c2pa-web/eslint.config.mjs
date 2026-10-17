@@ -26,6 +26,7 @@ export default [
         {
           ignoredFiles: [
             '{projectRoot}/test/**/*',
+            '{projectRoot}/playwright.vsi.config.ts',
             '{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}',
             '{projectRoot}/vite.config.{js,ts,mjs,mts}'
           ]

@@ -16,10 +16,18 @@ import type {
 } from '../signer.js';
 
 import { channel } from 'highgain';
+import type { LiveVideoResult, SequenceCoverage } from '../liveVideoValidator.js';
 
 // Define browser-to-worker RPC interface
 const { createTx, rx } = channel<{
   initWorker: (module: WebAssembly.Module) => void;
+
+  live_fromInit: (format: string, init: Blob, contextJson: string) => Promise<number>;
+  live_validateSegment: (id: number, segment: Blob) => Promise<LiveVideoResult>;
+  live_updateInit: (id: number, format: string, init: Blob) => Promise<LiveVideoResult>;
+  live_resetContinuity: (id: number) => Promise<LiveVideoResult>;
+  live_sequenceCoverage: (id: number) => Promise<SequenceCoverage>;
+  live_free: (id: number) => Promise<void>;
 
   // Reader construction methods
   reader_fromBlob: (

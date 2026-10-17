@@ -185,11 +185,9 @@ for algorithm in ("ed25519", "es256"):
         print(f"Generating trusted {algorithm} {name} init", flush=True)
         data = cbor2.dumps({"keys": keys})
         with claim_signer() as signer:
-            if name != "missing-keys":
+            if name not in ("missing-keys", "duplicate-keys"):
                 label = "c2pa.session-keys.extra" if name == "prefix-keys" else "c2pa.session-keys"
                 signer.add_dynamic_assertion(lambda *_: data, label=label, reserve_size=len(data))
-            if name == "duplicate-keys":
-                signer.add_dynamic_assertion(lambda *_: data, label="c2pa.session-keys__1", reserve_size=len(data))
             with c2pa.Context.from_dict(settings, signer=signer) as context:
                 def json_bytes(value):
                     if isinstance(value, bytes):
@@ -205,6 +203,8 @@ for algorithm in ("ed25519", "es256"):
                 # init hash. The provisional bytes are never used for admission.
                 for _ in range(2):
                     definition = {**manifest, "assertions": manifest["assertions"] + [{"label": "c2pa.hash.bmff.v3", "data": init_hash}]}
+                    if name == "duplicate-keys":
+                        definition["assertions"] += [{"label": "c2pa.session-keys", "data": {"keys": []}} for _ in range(2)]
                     with c2pa.Builder(definition, context=context) as builder:
                         output = io.BytesIO()
                         builder.sign("video/mp4", io.BytesIO(raw_init), output)

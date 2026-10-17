@@ -379,6 +379,69 @@ describe('settings', () => {
 });
 
 describe('withDefaultSettings', () => {
+  test.each([
+    '__proto__',
+    'constructor',
+    'prototype',
+    'toString',
+    'valueOf',
+    'hasOwnProperty',
+    'isPrototypeOf',
+    'propertyIsEnumerable',
+    'toLocaleString'
+  ])('ignores unsafe object-valued merge key %s at every level', async (key) => {
+    const settings = JSON.parse(`{
+      "${key}": { "c2paMergePollution": true },
+      "builder": {
+        "${key}": { "c2paMergePollution": true },
+        "generateC2paArchive": true,
+        "thumbnail": { "${key}": { "c2paMergePollution": true }, "enabled": false }
+      },
+      "verify": { "${key}": { "c2paMergePollution": true }, "verifyTrust": false },
+      "trust": { "${key}": { "c2paMergePollution": true }, "userAnchors": "anchors" },
+      "cawgTrust": { "${key}": { "c2paMergePollution": true }, "userAnchors": "cawg anchors" }
+    }`);
+    const merged = withDefaultSettings(settings);
+
+    // Serialization alone can hide an assignment to the __proto__ accessor.
+    for (const object of [
+      merged,
+      merged.builder,
+      merged.builder?.thumbnail,
+      merged.verify,
+      merged.trust,
+      merged.cawgTrust
+    ]) {
+      expect(Object.getPrototypeOf(object)).toBe(Object.prototype);
+      expect(Object.prototype.hasOwnProperty.call(object, key)).toBe(false);
+    }
+    expect(Object.prototype).not.toHaveProperty('c2paMergePollution');
+    expect(merged).toEqual({
+      builder: { generateC2paArchive: true, thumbnail: { enabled: false } },
+      verify: { verifyTrust: false },
+      trust: { userAnchors: 'anchors' },
+      cawgTrust: { userAnchors: 'cawg anchors' }
+    });
+    expect(JSON.parse(await resolveSettings(settings))).toEqual({
+      builder: { generate_c2pa_archive: true, thumbnail: { enabled: false } },
+      verify: { verify_trust: false },
+      trust: {
+        anchors: [
+          {
+            trust_anchors: 'anchors',
+            trust_uri: 'manifest_user_anchors',
+            trust_kind: 'manifest'
+          },
+          {
+            trust_anchors: 'cawg anchors',
+            trust_uri: 'cawg_user_anchors',
+            trust_kind: 'cawg'
+          }
+        ]
+      }
+    });
+  });
+
   it('applies the package defaults when no settings are given', () => {
     expect(withDefaultSettings(undefined)).toEqual({
       builder: { generateC2paArchive: true }

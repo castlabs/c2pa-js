@@ -57,6 +57,7 @@ export default defineConfig(() => ({
     }
   },
   server: {
+    host: '127.0.0.1',
     fs: {
       deny: []
     }
@@ -65,6 +66,7 @@ export default defineConfig(() => ({
     watch: false,
     include: ['{src,test}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     browser: {
+      api: { host: '127.0.0.1' },
       headless: true,
       enabled: true,
       provider: 'playwright',

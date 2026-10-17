@@ -62,8 +62,8 @@
   "devDependencies": {
     "@playwright/test": "^1.60.0",
     "@types/ssri": "^7.1.5",
-    "@vitest/browser": "^3.2.4",
-    "vitest": "^3.0.0",
+    "@vitest/browser": "^3.2.7",
+    "vitest": "^3.2.7",
     "msw": "^2.12.1",
     "rimraf": "^6.0.1",
     "typedoc": "^0.28.12",

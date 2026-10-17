@@ -120,11 +120,11 @@ for algorithm in ("ed25519", "es256"):
     # CBOR byte string containing the claim leaf, NOT the other direction.
     protected = cbor2.dumps({1: -8 if algorithm == "ed25519" else -7})
     payload = cbor2.dumps(leaf)
-    binding = cbor2.CBORTag(18, [protected, {}, payload, sign(cbor2.dumps(["Signature1", protected, b"", payload]))])
+    binding = cbor2.CBORTag(18, [protected, {}, None, sign(cbor2.dumps(["Signature1", protected, b"", payload]))])
     good = {"key": cose, "minSequenceNumber": 1, "createdAt": cbor2.CBORTag(0, "2026-09-10T00:00:00Z"), "validityPeriod": 86400, "signerBinding": binding}
     wrong = dict(good)
     wrong_payload = cbor2.dumps(leaf + b"wrong-leaf")
-    wrong["signerBinding"] = cbor2.CBORTag(18, [protected, {}, wrong_payload, sign(cbor2.dumps(["Signature1", protected, b"", wrong_payload]))])
+    wrong["signerBinding"] = cbor2.CBORTag(18, [protected, {}, None, sign(cbor2.dumps(["Signature1", protected, b"", wrong_payload]))])
     mixed = {**wrong, "key": {**wrong["key"], 2: b"different-kid"}}
     bad_keys[algorithm] = {"wrong-leaf": [wrong], "mixed-keys": [good, mixed], "empty-keys": [], "missing-keys": [], "malformed-keys": [{}], "prefix-keys": [good], "duplicate-keys": [good]}
 
@@ -182,6 +182,7 @@ for algorithm in ("ed25519", "es256"):
                             (out / f"{algorithm}-wrong-track.m4s").write_bytes(place(wrong_track, emsg(payload, signature)))
 
     for name, keys in bad_keys[algorithm].items():
+        print(f"Generating trusted {algorithm} {name} init", flush=True)
         data = cbor2.dumps({"keys": keys})
         with claim_signer() as signer:
             if name != "missing-keys":
@@ -190,7 +191,17 @@ for algorithm in ("ed25519", "es256"):
             if name == "duplicate-keys":
                 signer.add_dynamic_assertion(lambda *_: data, label="c2pa.session-keys__1", reserve_size=len(data))
             with c2pa.Context.from_dict(settings, signer=signer) as context:
-                with c2pa.Builder(manifest, context=context) as builder:
+                def json_bytes(value):
+                    if isinstance(value, bytes):
+                        return list(value)
+                    if isinstance(value, dict):
+                        return {k: json_bytes(v) for k, v in value.items()}
+                    if isinstance(value, list):
+                        return [json_bytes(v) for v in value]
+                    return value
+                init_hash = json_bytes(cbor2.loads(c2pa.trusted_vsi_hash_template(c2pa.TrustedVsiInputKind.INIT_HASH)))
+                definition = {**manifest, "assertions": manifest["assertions"] + [{"label": "c2pa.hash.bmff.v3", "data": init_hash}]}
+                with c2pa.Builder(definition, context=context) as builder:
                     output = io.BytesIO()
                     builder.sign("video/mp4", io.BytesIO(raw_init), output)
                     init = output.getvalue()

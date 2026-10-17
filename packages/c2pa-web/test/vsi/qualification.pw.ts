@@ -14,7 +14,8 @@ for (const mode of ['normal', 'inline', 'external']) {
     test(`${mode} ${algorithm}: trusted admission, continuity, refresh and lifecycle`, async ({ page }) => {
       const errors: string[] = [];
       page.on('pageerror', e => errors.push(e.message));
-      await page.goto(`/tools/vsi.html${mode === 'external' ? '?external=1' : ''}`);
+      const response = await page.goto(`/tools/vsi.html${mode === 'external' ? '?external=1' : ''}`);
+      if (mode === 'external') expect(response?.headers()['content-security-policy']).toContain("worker-src 'self'");
       await page.waitForFunction(() => (window as any).ready);
       const result = await page.evaluate(async ({ mode, algorithm }) => {
         const w = window as any;

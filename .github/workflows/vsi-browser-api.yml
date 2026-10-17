@@ -28,6 +28,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: vsi-browser-api
+          workspaces: '. -> dist/target'
+          cache-on-failure: true
       - uses: pnpm/action-setup@v4
         with:
           run_install: false
@@ -40,6 +42,14 @@ jobs:
         run: |
           node tools/check-castlabs-source.mjs
           pnpm exec vitest run --config tools/vsi-unit.config.ts
+      - name: Locked WASM build (no Nx executor or cache deletion)
+        run: cargo build --locked -p c2pa-wasm --target wasm32-unknown-unknown
+      - name: Generate and verify real wasm-bindgen exports
+        run: |
+          curl -fL https://github.com/wasm-bindgen/wasm-bindgen/releases/download/0.2.129/wasm-bindgen-0.2.129-x86_64-unknown-linux-musl.tar.gz -o tmp/wasm-bindgen.tar.gz
+          tar -xzf tmp/wasm-bindgen.tar.gz -C tmp
+          tmp/wasm-bindgen-0.2.129-x86_64-unknown-linux-musl/wasm-bindgen dist/target/wasm32-unknown-unknown/debug/c2pa_wasm.wasm --out-dir packages/c2pa-wasm/pkg --out-name c2pa --target web --omit-default-module-path
+          node tools/vsi-bindings.mjs
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -49,14 +59,6 @@ jobs:
           printf '%s  %s\n' 5b9a4bd5f56b0fdcd4dc27f42569524677505e0744b51566da7908c836ac0bfb tmp/c2pa_python-0.37.13.dev2-py3-none-manylinux_2_28_x86_64.whl | sha256sum -c -
           pip install --only-binary=:all: tmp/c2pa_python-0.37.13.dev2-py3-none-manylinux_2_28_x86_64.whl cbor2 cryptography
           python tools/vsi-fixtures.py tmp/vsi-python-reference tmp/vsi-fixtures
-      - name: Locked WASM build (no Nx executor or cache deletion)
-        run: cargo build --locked -p c2pa-wasm --target wasm32-unknown-unknown
-      - name: Generate and verify real wasm-bindgen exports
-        run: |
-          curl -fL https://github.com/wasm-bindgen/wasm-bindgen/releases/download/0.2.129/wasm-bindgen-0.2.129-x86_64-unknown-linux-musl.tar.gz -o tmp/wasm-bindgen.tar.gz
-          tar -xzf tmp/wasm-bindgen.tar.gz -C tmp
-          tmp/wasm-bindgen-0.2.129-x86_64-unknown-linux-musl/wasm-bindgen dist/target/wasm32-unknown-unknown/debug/c2pa_wasm.wasm --out-dir packages/c2pa-wasm/pkg --out-name c2pa --target web --omit-default-module-path
-          node tools/vsi-bindings.mjs
       - name: Locked schema generation and browser packages
         run: |
           mkdir -p packages/c2pa-types/schemas

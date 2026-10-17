@@ -200,13 +200,18 @@ for algorithm in ("ed25519", "es256"):
                         return [json_bytes(v) for v in value]
                     return value
                 init_hash = json_bytes(cbor2.loads(c2pa.trusted_vsi_hash_template(c2pa.TrustedVsiInputKind.INIT_HASH)))
-                definition = {**manifest, "assertions": manifest["assertions"] + [{"label": "c2pa.hash.bmff.v3", "data": init_hash}]}
-                with c2pa.Builder(definition, context=context) as builder:
-                    output = io.BytesIO()
-                    builder.sign("video/mp4", io.BytesIO(raw_init), output)
-                    init = output.getvalue()
+                # Generic Builder preserves an explicitly supplied BMFF hash.
+                # First determine final UUID placement/size, then sign the actual
+                # init hash. The provisional bytes are never used for admission.
+                for _ in range(2):
+                    definition = {**manifest, "assertions": manifest["assertions"] + [{"label": "c2pa.hash.bmff.v3", "data": init_hash}]}
+                    with c2pa.Builder(definition, context=context) as builder:
+                        output = io.BytesIO()
+                        builder.sign("video/mp4", io.BytesIO(raw_init), output)
+                        init = output.getvalue()
+                    init_hash = json_bytes(cbor2.loads(canonical(c2pa.TrustedVsiInputKind.INIT_HASH, init)))
                 with c2pa.Reader("video/mp4", io.BytesIO(init), context=context) as reader:
-                    assert reader.get_validation_state() == "Trusted", name
+                    assert reader.get_validation_state() == "Trusted", (name, reader.get_validation_results())
                 (out / f"{algorithm}-{name}-init.mp4").write_bytes(init)
 
 (out / "context.json").write_text(json.dumps(settings))

@@ -52,7 +52,7 @@ for (const mode of ['normal', 'inline', 'external']) {
           const settings = {
             trust: {
               trustAnchors: new URL(
-                '/tmp/vsi-fixtures/manifest-roots.pem',
+                '/tmp/vsi-fixtures/manifest-roots.txt',
                 location.href
               ).href,
               trustConfig: raw.trust.trust_config

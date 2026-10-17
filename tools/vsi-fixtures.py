@@ -221,7 +221,7 @@ for algorithm in ("ed25519", "es256"):
                 (out / f"{algorithm}-{name}-init.mp4").write_bytes(init)
 
 (out / "context.json").write_text(json.dumps(settings))
-(out / "manifest-roots.pem").write_text("\n".join(anchor["trust_anchors"] for anchor in settings["trust"]["anchors"] if anchor["trust_kind"] == "manifest"))
+(out / "manifest-roots.txt").write_text("\n".join(anchor["trust_anchors"] for anchor in settings["trust"]["anchors"] if anchor["trust_kind"] == "manifest"))
 files = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in out.iterdir() if p.is_file()}
 (out / "provenance.json").write_text(json.dumps({"python": "466707025658fd2fd5343d74b06f7081db09e64c", "sdk": "afd6fffe5a066e0b5b1a14f3f8c7ac189e7f0c95", "wheelSha256": "5b9a4bd5f56b0fdcd4dc27f42569524677505e0744b51566da7908c836ac0bfb", "generatorDependencies": {name: importlib.metadata.version(name) for name in ("cbor2", "cryptography")}, "files": files}, indent=2))
 print(f"Generated {len(files)} real-crypto browser fixture files; timescale={timescale}, duration={duration}")

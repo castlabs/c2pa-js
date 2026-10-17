@@ -57,7 +57,7 @@ jobs:
         run: |
           curl -fL https://github.com/castlabs/c2pa-python/releases/download/castlabs-v0.37.13.dev2/c2pa_python-0.37.13.dev2-py3-none-manylinux_2_28_x86_64.whl -o tmp/c2pa_python-0.37.13.dev2-py3-none-manylinux_2_28_x86_64.whl
           printf '%s  %s\n' 5b9a4bd5f56b0fdcd4dc27f42569524677505e0744b51566da7908c836ac0bfb tmp/c2pa_python-0.37.13.dev2-py3-none-manylinux_2_28_x86_64.whl | sha256sum -c -
-          pip install --only-binary=:all: tmp/c2pa_python-0.37.13.dev2-py3-none-manylinux_2_28_x86_64.whl cbor2 cryptography
+          pip install --only-binary=:all: tmp/c2pa_python-0.37.13.dev2-py3-none-manylinux_2_28_x86_64.whl cbor2==6.1.5 cryptography==50.0.2
           python tools/vsi-fixtures.py tmp/vsi-python-reference tmp/vsi-fixtures
       - name: Locked schema generation and browser packages
         id: packages

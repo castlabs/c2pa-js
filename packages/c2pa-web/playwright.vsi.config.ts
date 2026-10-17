@@ -13,6 +13,7 @@ export default defineConfig({
   testDir: './test/vsi',
   testMatch: '**/*.pw.ts',
   timeout: 120_000,
+  maxFailures: 1,
   workers: 1,
   use: { baseURL: 'https://127.0.0.1:4173', ignoreHTTPSErrors: true },
   projects: [

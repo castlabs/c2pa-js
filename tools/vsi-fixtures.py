@@ -4,6 +4,7 @@ Recipe adapted from c2pa-python 466707025658fd2fd5343d74b06f7081db09e64c
 tests/test_trusted_vsi_api.py. These are test credentials, not production trust.
 """
 import hashlib
+import importlib.metadata
 import io
 import json
 from pathlib import Path
@@ -99,7 +100,11 @@ def claim_signer():
 
 manifest = {"claim_version": 2, "format": "video/mp4", "claim_generator_info": [{"name": "VSI browser CI fixtures", "specVersion": "2.4"}],
             "assertions": [{"label": "c2pa.actions", "data": {"actions": [{"action": "c2pa.created", "digitalSourceType": "http://c2pa.org/digitalsourcetype/empty"}]}}]}
-leaf = x509.load_pem_x509_certificate((fixtures / "es256_certs.pem").read_bytes()).public_bytes(serialization.Encoding.DER)
+chain = x509.load_pem_x509_certificates((fixtures / "es256_certs.pem").read_bytes())
+assert len(chain) > 1
+leaf = chain[0].public_bytes(serialization.Encoding.DER)
+issuer = chain[-1].public_bytes(serialization.Encoding.DER)
+assert issuer != leaf
 bad_keys = {}
 for algorithm in ("ed25519", "es256"):
     kid = b"browser-ci-session"
@@ -123,7 +128,8 @@ for algorithm in ("ed25519", "es256"):
     binding = cbor2.CBORTag(18, [protected, {}, None, sign(cbor2.dumps(["Signature1", protected, b"", payload]))])
     good = {"key": cose, "minSequenceNumber": 1, "createdAt": cbor2.CBORTag(0, "2026-09-10T00:00:00Z"), "validityPeriod": 86400, "signerBinding": binding}
     wrong = dict(good)
-    wrong_payload = cbor2.dumps(leaf + b"wrong-leaf")
+    # A real issuer certificate is deliberately NOT the claim signing leaf.
+    wrong_payload = cbor2.dumps(issuer)
     wrong["signerBinding"] = cbor2.CBORTag(18, [protected, {}, None, sign(cbor2.dumps(["Signature1", protected, b"", wrong_payload]))])
     mixed = {**wrong, "key": {**wrong["key"], 2: b"different-kid"}}
     bad_keys[algorithm] = {"wrong-leaf": [wrong], "mixed-keys": [good, mixed], "empty-keys": [], "missing-keys": [], "malformed-keys": [{}], "prefix-keys": [good], "duplicate-keys": [good]}
@@ -216,5 +222,5 @@ for algorithm in ("ed25519", "es256"):
 
 (out / "context.json").write_text(json.dumps(settings))
 files = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in out.iterdir() if p.is_file()}
-(out / "provenance.json").write_text(json.dumps({"python": "466707025658fd2fd5343d74b06f7081db09e64c", "sdk": "afd6fffe5a066e0b5b1a14f3f8c7ac189e7f0c95", "wheelSha256": "5b9a4bd5f56b0fdcd4dc27f42569524677505e0744b51566da7908c836ac0bfb", "files": files}, indent=2))
+(out / "provenance.json").write_text(json.dumps({"python": "466707025658fd2fd5343d74b06f7081db09e64c", "sdk": "afd6fffe5a066e0b5b1a14f3f8c7ac189e7f0c95", "wheelSha256": "5b9a4bd5f56b0fdcd4dc27f42569524677505e0744b51566da7908c836ac0bfb", "generatorDependencies": {name: importlib.metadata.version(name) for name in ("cbor2", "cryptography")}, "files": files}, indent=2))
 print(f"Generated {len(files)} real-crypto browser fixture files; timescale={timescale}, duration={duration}")

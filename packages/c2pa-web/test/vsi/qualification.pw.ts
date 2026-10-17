@@ -44,10 +44,10 @@ for (const mode of ['normal', 'inline', 'external']) {
           // Context takes public web Settings, not the native trust.anchors wire shape.
           const settings = {
             trust: {
-              trustAnchors: raw.trust.anchors
-                .filter((anchor: any) => anchor.trust_kind === 'manifest')
-                .map((anchor: any) => anchor.trust_anchors)
-                .join('\n'),
+              trustAnchors: new URL(
+                '/tmp/vsi-fixtures/manifest-roots.pem',
+                location.href
+              ).href,
               trustConfig: raw.trust.trust_config
             },
             verify: {
@@ -121,6 +121,14 @@ for (const mode of ['normal', 'inline', 'external']) {
           ])
             await reject(bad, await fixture(`${bad}-init.mp4`));
 
+          // Prove the first key in the mixed-key rejection fixture is valid by itself.
+          const probe = await api.LiveVideoValidator.fromInit(
+            runtime,
+            'video/mp4',
+            await fixture('good-keys-init.mp4'),
+            context
+          );
+          await probe.free();
           const handle = await api.LiveVideoValidator.fromInit(
             runtime,
             'video/mp4',

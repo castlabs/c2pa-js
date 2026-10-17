@@ -66,6 +66,8 @@ jobs:
           (cd packages/c2pa-types && cargo run --locked -p c2pa-types && node generate-ci.mjs && pnpm exec tsc)
           pnpm --dir packages/c2pa-utilities exec tsc --project tsconfig.lib.json
           pnpm --dir packages/c2pa-web exec vite build
+      - name: Lint browser API and qualification tests
+        run: pnpm --dir packages/c2pa-web exec eslint .
       - name: Install supported browsers
         run: pnpm --dir packages/c2pa-web exec playwright install --with-deps chromium firefox webkit
       - name: Existing fragment-offset regressions (unchanged)

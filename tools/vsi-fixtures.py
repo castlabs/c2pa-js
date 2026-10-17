@@ -105,7 +105,7 @@ assert len(chain) > 1
 leaf = chain[0].public_bytes(serialization.Encoding.DER)
 issuer = chain[-1].public_bytes(serialization.Encoding.DER)
 assert issuer != leaf
-bad_keys = {}
+key_cases = {}
 for algorithm in ("ed25519", "es256"):
     kid = b"browser-ci-session"
     if algorithm == "ed25519":
@@ -132,7 +132,7 @@ for algorithm in ("ed25519", "es256"):
     wrong_payload = cbor2.dumps(issuer)
     wrong["signerBinding"] = cbor2.CBORTag(18, [protected, {}, None, sign(cbor2.dumps(["Signature1", protected, b"", wrong_payload]))])
     mixed = {**wrong, "key": {**wrong["key"], 2: b"different-kid"}}
-    bad_keys[algorithm] = {"wrong-leaf": [wrong], "mixed-keys": [good, mixed], "empty-keys": [], "missing-keys": [], "malformed-keys": [{}], "prefix-keys": [good], "duplicate-keys": [good]}
+    key_cases[algorithm] = {"good-keys": [good], "wrong-leaf": [wrong], "mixed-keys": [good, mixed], "empty-keys": [], "missing-keys": [], "malformed-keys": [{}], "prefix-keys": [good], "duplicate-keys": [good]}
 
     for epoch in ("original", "refresh"):
         with claim_signer() as signer:
@@ -187,7 +187,7 @@ for algorithm in ("ed25519", "es256"):
                             signature = session.sign_sig_structure(cbor2.dumps(["Signature1", protected_media, b"", payload]), sequence)
                             (out / f"{algorithm}-wrong-track.m4s").write_bytes(place(wrong_track, emsg(payload, signature)))
 
-    for name, keys in bad_keys[algorithm].items():
+    for name, keys in key_cases[algorithm].items():
         print(f"Generating trusted {algorithm} {name} init", flush=True)
         data = cbor2.dumps({"keys": keys})
         with claim_signer() as signer:
@@ -221,6 +221,7 @@ for algorithm in ("ed25519", "es256"):
                 (out / f"{algorithm}-{name}-init.mp4").write_bytes(init)
 
 (out / "context.json").write_text(json.dumps(settings))
+(out / "manifest-roots.pem").write_text("\n".join(anchor["trust_anchors"] for anchor in settings["trust"]["anchors"] if anchor["trust_kind"] == "manifest"))
 files = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in out.iterdir() if p.is_file()}
 (out / "provenance.json").write_text(json.dumps({"python": "466707025658fd2fd5343d74b06f7081db09e64c", "sdk": "afd6fffe5a066e0b5b1a14f3f8c7ac189e7f0c95", "wheelSha256": "5b9a4bd5f56b0fdcd4dc27f42569524677505e0744b51566da7908c836ac0bfb", "generatorDependencies": {name: importlib.metadata.version(name) for name in ("cbor2", "cryptography")}, "files": files}, indent=2))
 print(f"Generated {len(files)} real-crypto browser fixture files; timescale={timescale}, duration={duration}")

@@ -55,8 +55,8 @@ describe('live validator lifecycle', () => {
 
   it('does not poison the queue after rejection or block other validators', async () => {
     const map = createLiveValidatorMap<{ free(): void }>();
-    const id = map.add({ free() {} });
-    const other = map.add({ free() {} });
+    const id = map.add({ free: vi.fn() });
+    const other = map.add({ free: vi.fn() });
     const failure = map.run(id, async () => {
       throw new Error('refresh rejected');
     });

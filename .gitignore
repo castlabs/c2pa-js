@@ -53,3 +53,4 @@ docs/*
 !/docs/castlabs-vsi/
 /docs/castlabs-vsi/*
 !/docs/castlabs-vsi/README.md
+!/docs/castlabs-vsi/security.md

@@ -5,6 +5,8 @@ planned signer 1.0.8 VSI line. It is not a published or browser-qualified VSI
 implementation. See [Castlabs VSI source preparation](docs/castlabs-vsi/README.md)
 for exact inputs, the stateful validator API plan and player migration gates.
 The native Node package remains private and is not part of this product release.
+See the [VSI browser security assessment](docs/castlabs-vsi/security.md) for the
+selected dependency hardening, regression coverage and qualification limits.
 Upstream changelogs below the package directories retain their historical names.
 
 ## Overview

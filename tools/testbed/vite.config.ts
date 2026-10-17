@@ -15,11 +15,11 @@ export default defineConfig(() => ({
   cacheDir: '../../node_modules/.vite/tools/testbed',
   server: {
     port: 4200,
-    host: 'localhost'
+    host: '127.0.0.1'
   },
   preview: {
     port: 4300,
-    host: 'localhost'
+    host: '127.0.0.1'
   },
   plugins: [mkcert()],
   build: {

@@ -11,6 +11,24 @@ permissions:
   contents: read
 
 jobs:
+  node_security:
+    name: Check source and settings security regressions
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: node tools/check-castlabs-source.mjs
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Run utilities tests without native builds
+        working-directory: packages/c2pa-utilities
+        run: pnpm exec vitest run --maxWorkers=1 --no-file-parallelism
+
   cargo_fmt:
     name: Enforce Rust code format
     runs-on: ubuntu-24.04

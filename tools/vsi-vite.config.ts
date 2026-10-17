@@ -22,15 +22,20 @@ export default defineConfig({
     },
     fs: { allow: [process.cwd()] }
   },
-  plugins: [{
-    name: 'vsi-strict-csp',
-    configureServer(server) {
-      server.middlewares.use((req, res, next) => {
-        if (req.url?.includes('external=1')) {
-          res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self' wss:; style-src 'self' 'unsafe-inline'");
-        }
-        next();
-      });
+  plugins: [
+    {
+      name: 'vsi-strict-csp',
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          if (req.url?.includes('external=1')) {
+            res.setHeader(
+              'Content-Security-Policy',
+              "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self' wss:; style-src 'self' 'unsafe-inline'"
+            );
+          }
+          next();
+        });
+      }
     }
-  }]
+  ]
 });

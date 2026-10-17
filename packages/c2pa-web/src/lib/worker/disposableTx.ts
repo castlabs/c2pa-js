@@ -19,10 +19,13 @@ export function disposableTx<T extends object>(source: T) {
         if (stopped) return Promise.reject(stopped);
         return new Promise((resolve, reject) => {
           pending.add(reject);
-          Promise.resolve().then(() => {
-            if (stopped) throw stopped;
-            return Reflect.apply(method, target, args);
-          }).then(resolve, reject).finally(() => pending.delete(reject));
+          Promise.resolve()
+            .then(() => {
+              if (stopped) throw stopped;
+              return Reflect.apply(method, target, args);
+            })
+            .then(resolve, reject)
+            .finally(() => pending.delete(reject));
         });
       };
     }

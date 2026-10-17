@@ -611,7 +611,7 @@ dependencies = [
  "getrandom 0.4.3",
  "js-sys",
  "log",
- "pem",
+ "pem 3.0.6",
  "serde",
  "serde-wasm-bindgen",
  "serde_bytes",

@@ -18,18 +18,36 @@ describe('live validator lifecycle', () => {
     const id = map.add({ free });
     const order: string[] = [];
     let release!: () => void;
-    const gate = new Promise<void>(resolve => { release = resolve; });
-    const first = map.run(id, async () => { order.push('blob-start'); await gate; order.push('blob-end'); });
-    const second = map.run(id, () => { order.push('refresh'); });
-    const reset = map.run(id, () => { order.push('reset'); });
-    const coverage = map.run(id, () => { order.push('coverage'); });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const first = map.run(id, async () => {
+      order.push('blob-start');
+      await gate;
+      order.push('blob-end');
+    });
+    const second = map.run(id, () => {
+      order.push('refresh');
+    });
+    const reset = map.run(id, () => {
+      order.push('reset');
+    });
+    const coverage = map.run(id, () => {
+      order.push('coverage');
+    });
     const closing = map.free(id);
     expect(map.free(id)).toBe(closing);
     await expect(map.run(id, () => undefined)).rejects.toThrow('closing');
     expect(free).not.toHaveBeenCalled();
     release();
     await Promise.all([first, second, reset, coverage, closing]);
-    expect(order).toEqual(['blob-start', 'blob-end', 'refresh', 'reset', 'coverage']);
+    expect(order).toEqual([
+      'blob-start',
+      'blob-end',
+      'refresh',
+      'reset',
+      'coverage'
+    ]);
     expect(free).toHaveBeenCalledTimes(1);
     expect(map.free(id)).toBe(closing);
     await expect(map.run(id, () => undefined)).rejects.toThrow();
@@ -39,7 +57,9 @@ describe('live validator lifecycle', () => {
     const map = createLiveValidatorMap<{ free(): void }>();
     const id = map.add({ free() {} });
     const other = map.add({ free() {} });
-    const failure = map.run(id, async () => { throw new Error('refresh rejected'); });
+    const failure = map.run(id, async () => {
+      throw new Error('refresh rejected');
+    });
     const later = map.run(id, () => 42);
     await expect(map.run(other, () => 7)).resolves.toBe(7);
     await expect(failure).rejects.toThrow('refresh rejected');
@@ -51,7 +71,14 @@ describe('live validator lifecycle', () => {
 
   it('worker disposal rejects admitted and future RPCs, including pending admission', async () => {
     let finish!: (value: number) => void;
-    const source = { call: vi.fn(() => new Promise<number>(resolve => { finish = resolve; })) };
+    const source = {
+      call: vi.fn(
+        () =>
+          new Promise<number>((resolve) => {
+            finish = resolve;
+          })
+      )
+    };
     const managed = disposableTx(source);
     const pending = managed.tx.call();
     await Promise.resolve();

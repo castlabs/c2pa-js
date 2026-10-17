@@ -10,7 +10,10 @@
 /** Queues operations at receipt, before any asynchronous Blob/refresh work. */
 export function createLiveValidatorMap<T extends { free(): void }>() {
   let nextId = 0;
-  const entries = new Map<number, { value: T; tail: Promise<unknown>; closing?: Promise<void> }>();
+  const entries = new Map<
+    number,
+    { value: T; tail: Promise<unknown>; closing?: Promise<void> }
+  >();
   // Tombstones make duplicate free idempotent without retaining WASM objects.
   const frees = new Map<number, Promise<void>>();
 
@@ -22,9 +25,13 @@ export function createLiveValidatorMap<T extends { free(): void }>() {
     },
     run<R>(id: number, operation: (value: T) => R | Promise<R>): Promise<R> {
       const entry = entries.get(id);
-      if (!entry || entry.closing) return Promise.reject(new Error('Unknown or closing live validator'));
+      if (!entry || entry.closing)
+        return Promise.reject(new Error('Unknown or closing live validator'));
       const result = entry.tail.then(() => operation(entry.value));
-      entry.tail = result.then(() => undefined, () => undefined);
+      entry.tail = result.then(
+        () => undefined,
+        () => undefined
+      );
       return result;
     },
     free(id: number): Promise<void> {
@@ -33,7 +40,11 @@ export function createLiveValidatorMap<T extends { free(): void }>() {
       const entry = entries.get(id);
       if (!entry) return Promise.reject(new Error('Unknown live validator'));
       entry.closing = entry.tail.then(() => {
-        try { entry.value.free(); } finally { entries.delete(id); }
+        try {
+          entry.value.free();
+        } finally {
+          entries.delete(id);
+        }
       });
       frees.set(id, entry.closing);
       return entry.closing;

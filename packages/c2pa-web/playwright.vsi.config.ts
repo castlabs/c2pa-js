@@ -20,5 +20,8 @@ export default defineConfig({
     { name: 'firefox', use: { browserName: 'firefox' } },
     { name: 'webkit', use: { browserName: 'webkit' } }
   ],
-  reporter: [['list'], ['html', { outputFolder: '../../tmp/vsi-playwright-report', open: 'never' }]]
+  reporter: [
+    ['list'],
+    ['html', { outputFolder: '../../tmp/vsi-playwright-report', open: 'never' }]
+  ]
 });

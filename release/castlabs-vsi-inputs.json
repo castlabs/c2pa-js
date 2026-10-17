@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "bundleVersion": "1.0.8",
-  "sdkSha": "afd6fffe5a066e0b5b1a14f3f8c7ac189e7f0c95",
+  "sdkSha": "6021100cc5060b06061ca15b634281cfeb97c718",
   "releaseReady": false,
   "sdkStatus": "pre-integration",
   "qualifiedSdkSha": null,
@@ -10,10 +10,18 @@
     "repository": "castlabs/c2pa-rs",
     "targetRef": "feat/trusted-vsi-functional",
     "requiredPRs": [27, 28, 29],
-    "mergeCommits": { "27": null, "28": null, "29": null },
-    "nativeQualification": null
+    "mergeCommits": {
+      "27": "6ce147fb443b44d356a00d72b58e5ff3a7bbd401",
+      "28": "7a1559dfbc2a0064c1e65d66a11d32ba35d5f78e",
+      "29": "6021100cc5060b06061ca15b634281cfeb97c718"
+    },
+    "nativeQualification": {
+      "runId": "39004446457",
+      "headSha": "6021100cc5060b06061ca15b634281cfeb97c718",
+      "workflowPath": ".github/workflows/castlabs-live-video-qualification.yml"
+    }
   },
-  "publicationBlocker": "The current SDK is the API development source, not the final 1.0.8 release pin. Await the owner's qualified integrated commit on feat/trusted-vsi-functional containing merged PRs 27/28/29, including the additional ZIP 9.0.4 security fix in PR 27. Do not substitute an individual PR head or the unqualified branch tip.",
+  "publicationBlocker": "Integrated SDK candidate 6021100cc5060b06061ca15b634281cfeb97c718 contains merged PRs 27/28/29, including the ZIP 9.0.4 security fix in PR 27, but is not release-qualified. Await owner confirmation of native qualification run 39004446457 and all browser/package gates before enabling readiness. This run pointer and the merge identities are not qualification claims.",
   "packages": {
     "c2pa-types": "0.7.5",
     "c2pa-wasm": "0.13.2",

@@ -7,7 +7,7 @@ members = ['packages/c2pa-wasm', 'packages/c2pa-types', 'packages/c2pa-node']
 rust-version = "1.96.0"
 
 [workspace.dependencies]
-c2pa = { git = "https://github.com/castlabs/c2pa-rs", rev = "afd6fffe5a066e0b5b1a14f3f8c7ac189e7f0c95", features = [
+c2pa = { git = "https://github.com/castlabs/c2pa-rs", rev = "6021100cc5060b06061ca15b634281cfeb97c718", features = [
     "unstable_builder_filter",
     "unstable_live_video",
     "pdf",

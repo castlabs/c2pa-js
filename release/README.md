@@ -8,11 +8,16 @@ the private Node package is excluded. Tarball dependencies use absolute
 
 ## Publication Is Blocked
 
-The API source still pins SDK `afd6fffe5a066e0b5b1a14f3f8c7ac189e7f0c95`.
-It is **pre-integration**, not the final 1.0.8 release SDK. SDK PRs 27/28/29,
-including the additional ZIP 9.0.4 security fix in PR 27, are being integrated
-and qualified separately. This change does not select any SDK PR head, edit SDK
-dependencies, merge SDK work, or authorize release execution.
+The API source and release inputs pin the combined SDK candidate
+`6021100cc5060b06061ca15b634281cfeb97c718`, inherited from API commit
+`406ba20206eaa8db3dcfa9ea247d6dbb977963c4`. It contains merged SDK PRs
+27/28/29, including the ZIP 9.0.4 security fix in PR 27. It is **not yet
+release-qualified**. `releaseReady` remains false, `qualifiedSdkSha` remains
+null, and the input status remains `pre-integration` until owner-confirmed
+qualification of the integrated candidate. Native run `39004446457` is recorded
+as a qualification pointer, not a success claim. This preparation does not
+select an individual SDK PR head, edit SDK dependencies, merge SDK work, or
+authorize release execution.
 
 After the merged SDK functional integration is qualified, the main integration owner must update the
 source pin, Cargo lock and this input manifest together. Readiness requires

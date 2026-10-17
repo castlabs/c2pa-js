@@ -9,10 +9,14 @@ import io
 import json
 from pathlib import Path
 import sys
+from datetime import datetime, timedelta, timezone
 
 import c2pa
+import c2pa.c2pa as bindings
 import cbor2
 from cryptography import x509
+from cryptography.x509 import ocsp
+from cryptography.x509.oid import AuthorityInformationAccessOID, ExtendedKeyUsageOID, NameOID
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519
 from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
@@ -24,8 +28,29 @@ fixtures = source / "tests/fixtures"
 settings = json.loads((source / "tests/trust_config_test_settings.json").read_text())
 settings["builder"] = {"thumbnail": {"enabled": False}}
 settings["verify"] = {"verify_after_reading": True, "verify_trust": True, "verify_timestamp_trust": True}
-assert c2pa.__version__ == "0.37.13.dev2"
-assert c2pa.sdk_version() == "0.92.0-dev"
+# Fixture identity stays tied to this published generator, not to a future browser SDK pin.
+python_source = "466707025658fd2fd5343d74b06f7081db09e64c"
+lock_bytes = (source / "release/castlabs-vsi-inputs.lock.json").read_bytes()
+lock_sha = hashlib.sha256(lock_bytes).hexdigest()
+assert lock_sha == "c45697751d8446c2453d455148964b32c0d4d6bf55e8a1c800a3d6b5f1f6ea9c"
+inputs = json.loads(lock_bytes)
+evidence_bytes = Path(sys.argv[3]).read_bytes()
+evidence_sha = hashlib.sha256(evidence_bytes).hexdigest()
+assert evidence_sha == "35561c88627225770ada29730a5e5008a461939a1497f8870c03ca7041b56590"
+evidence = json.loads(evidence_bytes)
+assert evidence["sources"]["c2paPython"]["commit"] == python_source
+assert evidence["sources"]["c2paRs"] == {
+    "repository": inputs["rustSource"]["repository"], "url": inputs["rustSource"]["url"],
+    "commit": inputs["rustSource"]["commit"], "version": inputs["rustSource"]["version"],
+    "cargoLockSha256": inputs["rustSource"]["cargoLockSha256"],
+}
+wheel = next(member for member in evidence["artifact"]["members"] if member["target"] == "x86_64-unknown-linux-gnu")
+assert wheel["sha256"] == "5b9a4bd5f56b0fdcd4dc27f42569524677505e0744b51566da7908c836ac0bfb"
+native_library = Path(c2pa.__file__).parent / Path(wheel["nativeMember"]).relative_to("c2pa")
+assert Path(bindings._lib._name).resolve() == native_library.resolve()
+assert hashlib.sha256(native_library.read_bytes()).hexdigest() == wheel["nativeSha256"]
+assert c2pa.__version__ == inputs["package"]["version"]
+assert c2pa.sdk_version() == inputs["rustSource"]["version"]
 IAT = 1789041600  # 2026-09-10, within session and test claim-certificate validity.
 
 
@@ -92,9 +117,9 @@ def canonical(kind, data):
     return cbor2.dumps(template, canonical=True)
 
 
-def claim_signer():
+def claim_signer(gated=False):
     return c2pa.Signer.from_info(c2pa.C2paSignerInfo(
-        alg=b"es256", sign_cert=(fixtures / "es256_certs.pem").read_bytes(),
+        alg=b"es256", sign_cert=gate_chain if gated else (fixtures / "es256_certs.pem").read_bytes(),
         private_key=(fixtures / "es256_private.key").read_bytes(), ta_url=None))
 
 
@@ -105,6 +130,53 @@ assert len(chain) > 1
 leaf = chain[0].public_bytes(serialization.Encoding.DER)
 issuer = chain[-1].public_bytes(serialization.Encoding.DER)
 assert issuer != leaf
+
+# Only these extra fixtures have an AIA URL. verify.ocsp_fetch makes the real
+# asynchronous Rust Reader await the CI server; Context trust-anchor resolution
+# itself is deliberately already complete before a gate is armed.
+root_key = ec.derive_private_key(19, ec.SECP256R1())
+root_name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "VSI CI gate root")])
+start, end = datetime(2022, 1, 1, tzinfo=timezone.utc), datetime(2032, 1, 1, tzinfo=timezone.utc)
+gate_root = (x509.CertificateBuilder().subject_name(root_name).issuer_name(root_name)
+             .public_key(root_key.public_key()).serial_number(19).not_valid_before(start).not_valid_after(end)
+             .add_extension(x509.BasicConstraints(ca=True, path_length=None), critical=True)
+             .add_extension(x509.KeyUsage(False, False, False, False, False, True, True, False, False), critical=True)
+             .add_extension(x509.SubjectKeyIdentifier.from_public_key(root_key.public_key()), critical=False)
+             .sign(root_key, hashes.SHA256()))
+claim_key = serialization.load_pem_private_key((fixtures / "es256_private.key").read_bytes(), password=None)
+gate_leaf = (x509.CertificateBuilder().subject_name(chain[0].subject).issuer_name(root_name)
+             .public_key(claim_key.public_key()).serial_number(20).not_valid_before(start).not_valid_after(end)
+             .add_extension(x509.BasicConstraints(ca=False, path_length=None), critical=True)
+             .add_extension(x509.ExtendedKeyUsage([ExtendedKeyUsageOID.EMAIL_PROTECTION]), critical=True)
+             .add_extension(x509.KeyUsage(True, True, False, False, False, False, False, False, False), critical=True)
+             .add_extension(x509.SubjectKeyIdentifier.from_public_key(claim_key.public_key()), critical=False)
+             .add_extension(x509.AuthorityKeyIdentifier.from_issuer_public_key(root_key.public_key()), critical=False)
+             .add_extension(x509.AuthorityInformationAccess([x509.AccessDescription(
+                 AuthorityInformationAccessOID.OCSP,
+                 x509.UniformResourceIdentifier("https://127.0.0.1:4173/__vsi_gate/ocsp/"))]), critical=False)
+             .sign(root_key, hashes.SHA256()))
+gate_chain = gate_leaf.public_bytes(serialization.Encoding.PEM) + gate_root.public_bytes(serialization.Encoding.PEM)
+responder_key = ec.derive_private_key(23, ec.SECP256R1())
+responder = (x509.CertificateBuilder().subject_name(x509.Name([
+                x509.NameAttribute(NameOID.COMMON_NAME, "VSI CI OCSP responder")])).issuer_name(root_name)
+             .public_key(responder_key.public_key()).serial_number(23).not_valid_before(start).not_valid_after(end)
+             .add_extension(x509.BasicConstraints(ca=False, path_length=None), critical=True)
+             .add_extension(x509.ExtendedKeyUsage([ExtendedKeyUsageOID.OCSP_SIGNING]), critical=True)
+             .add_extension(x509.KeyUsage(True, False, False, False, False, False, False, False, False), critical=True)
+             .add_extension(x509.SubjectKeyIdentifier.from_public_key(responder_key.public_key()), critical=False)
+             .add_extension(x509.AuthorityKeyIdentifier.from_issuer_public_key(root_key.public_key()), critical=False)
+             .sign(root_key, hashes.SHA256()))
+now = datetime.now(timezone.utc)
+response = (ocsp.OCSPResponseBuilder().add_response(
+                gate_leaf, gate_root, hashes.SHA1(), ocsp.OCSPCertStatus.GOOD,
+                now - timedelta(minutes=5), now + timedelta(days=1), None, None)
+            .responder_id(ocsp.OCSPResponderEncoding.HASH, responder).certificates([responder, gate_root])
+            .sign(responder_key, hashes.SHA256()))
+(out / "gate-ocsp.der").write_bytes(response.public_bytes(serialization.Encoding.DER))
+(out / "gate-roots.txt").write_bytes(gate_root.public_bytes(serialization.Encoding.PEM))
+gate_settings = json.loads(json.dumps(settings))
+gate_settings["trust"]["anchors"] = [{"trust_kind": "manifest", "trust_uri": "urn:vsi-ci:gate-root",
+                                       "trust_anchors": gate_root.public_bytes(serialization.Encoding.PEM).decode()}]
 key_cases = {}
 for algorithm in ("ed25519", "es256"):
     kid = b"browser-ci-session"
@@ -134,13 +206,15 @@ for algorithm in ("ed25519", "es256"):
     mixed = {**wrong, "key": {**wrong["key"], 2: b"different-kid"}}
     key_cases[algorithm] = {"good-keys": [good], "wrong-leaf": [wrong], "mixed-keys": [good, mixed], "empty-keys": [], "missing-keys": [], "malformed-keys": [{}], "prefix-keys": [good], "duplicate-keys": [good]}
 
-    for epoch in ("original", "refresh"):
-        with claim_signer() as signer:
-            with c2pa.Context.from_dict(settings, signer=signer) as context:
+    for epoch in ("original", "refresh", "gate-original", "gate-refresh"):
+        gated = epoch.startswith("gate-")
+        refreshed = epoch.endswith("refresh")
+        with claim_signer(gated) as signer:
+            with c2pa.Context.from_dict(gate_settings if gated else settings, signer=signer) as context:
                 with c2pa.TrustedVsiSession.from_callback(
                     context, manifest, algorithm, cbor2.dumps(cose, canonical=True), kid, 1,
                     "2026-09-10T00:00:00Z", 86400, lambda _context, data: sign(data),
-                    mode="expert_sig_structure", reservation_nonce=("01" if epoch == "original" else "02") * 16,
+                    mode="expert_sig_structure", reservation_nonce=("02" if refreshed else "01") * 16,
                     signing_time_unix_seconds=IAT) as session:
                     reservation = session.reserve_init_uuid()
                     init = place(raw_init, session.finalize_init_uuid(canonical(c2pa.TrustedVsiInputKind.INIT_HASH, place(raw_init, reservation))))
@@ -155,7 +229,7 @@ for algorithm in ("ed25519", "es256"):
                         media[mfhd + 8:mfhd + 12] = sequence.to_bytes(4, "big")
                         media = bytes(media)
                         protected_media = cbor2.dumps({1: -8 if algorithm == "ed25519" else -7, "iat": IAT}, canonical=True)
-                        event_id = sequence + (100 if epoch == "refresh" else 0)
+                        event_id = sequence + (100 if refreshed else 0)
                         def emsg(payload, signature):
                             cose_bytes = cbor2.dumps(cbor2.CBORTag(18, [protected_media, {4: kid}, payload, signature]))
                             body = bytes(4) + b"urn:c2pa:verifiable-segment-info\0fseg\0" + timescale.to_bytes(4, "big") + bytes(4) + duration.to_bytes(4, "big") + event_id.to_bytes(4, "big") + cose_bytes
@@ -168,6 +242,13 @@ for algorithm in ("ed25519", "es256"):
                         final = emsg(payload, signature)
                         assert len(final) == len(placeholder)
                         (out / f"{algorithm}-{epoch}-{sequence}.m4s").write_bytes(place(media, final))
+                        if refreshed and sequence == 2:
+                            # A new valid sequence and current manifest, but an ID
+                            # already accepted before refresh. EMSG is hash-excluded.
+                            replay = bytearray(final)
+                            framing = 12 + len(b"urn:c2pa:verifiable-segment-info\0fseg\0")
+                            replay[framing + 12:framing + 16] = (1).to_bytes(4, "big")
+                            (out / f"{algorithm}-{epoch}-2-replay-id.m4s").write_bytes(place(media, replay))
                         if epoch == "original" and sequence == 4:
                             # EMSG framing is excluded from the media hash. These
                             # retain a real valid COSE signature and hard binding.
@@ -221,7 +302,9 @@ for algorithm in ("ed25519", "es256"):
                 (out / f"{algorithm}-{name}-init.mp4").write_bytes(init)
 
 (out / "context.json").write_text(json.dumps(settings))
+(out / "generator-inputs.lock.json").write_bytes(lock_bytes)
+(out / "generator-wheel-evidence.json").write_bytes(evidence_bytes)
 (out / "manifest-roots.txt").write_text("\n".join(anchor["trust_anchors"] for anchor in settings["trust"]["anchors"] if anchor["trust_kind"] == "manifest"))
 files = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in out.iterdir() if p.is_file()}
-(out / "provenance.json").write_text(json.dumps({"python": "466707025658fd2fd5343d74b06f7081db09e64c", "sdk": "afd6fffe5a066e0b5b1a14f3f8c7ac189e7f0c95", "wheelSha256": "5b9a4bd5f56b0fdcd4dc27f42569524677505e0744b51566da7908c836ac0bfb", "generatorDependencies": {name: importlib.metadata.version(name) for name in ("cbor2", "cryptography")}, "files": files}, indent=2))
+(out / "provenance.json").write_text(json.dumps({"python": python_source, "sdk": inputs["rustSource"]["commit"], "nativeSource": inputs["rustSource"], "releaseInputLockSha256": lock_sha, "wheelEvidenceSha256": evidence_sha, "wheelSha256": wheel["sha256"], "nativeSha256": wheel["nativeSha256"], "generatorDependencies": {name: importlib.metadata.version(name) for name in ("cbor2", "cryptography")}, "files": files}, indent=2))
 print(f"Generated {len(files)} real-crypto browser fixture files; timescale={timescale}, duration={duration}")

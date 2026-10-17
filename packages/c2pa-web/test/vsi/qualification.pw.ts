@@ -86,6 +86,7 @@ for (const mode of ['normal', 'inline', 'external']) {
           const four = await fixture('original-4.m4s');
           const context = new w.api.Context(settings);
           const rejected: string[] = [];
+          const rejectionErrors: Record<string, string> = {};
           async function reject(name: string, data: Blob, ctx = context) {
             try {
               const handle = await api.LiveVideoValidator.fromInit(
@@ -95,8 +96,9 @@ for (const mode of ['normal', 'inline', 'external']) {
                 ctx
               );
               await handle.free();
-            } catch {
+            } catch (error) {
               rejected.push(name);
+              rejectionErrors[name] = error instanceof Error ? error.message : String(error);
             }
           }
           await reject('untrusted', init, new w.api.Context());
@@ -114,6 +116,10 @@ for (const mode of ['normal', 'inline', 'external']) {
               })
             );
           }
+          await reject('strictV1', init, new w.api.Context({
+            ...settings,
+            verify: { ...settings.verify, strictV1Validation: true }
+          }));
           const tamperedInit = new Uint8Array(await init.arrayBuffer());
           tamperedInit[tamperedInit.length - 1] ^= 1;
           await reject('tampered', new Blob([tamperedInit]));
@@ -172,10 +178,13 @@ for (const mode of ['normal', 'inline', 'external']) {
           const refreshPreservedReplay = await handle.validateSegment(four);
           const reset = await handle.resetContinuity();
           const afterReset = await handle.validateSegment(one);
-          const refresh = await handle.updateInit(
-            'video/mp4',
-            await fixture('refresh-init.mp4')
-          );
+          const replacement = await fixture('refresh-init.mp4');
+          const replayAcrossRefresh = await fixture('refresh-2-replay-id.m4s');
+          const freshEpoch = await api.LiveVideoValidator.fromInit(runtime, 'video/mp4', replacement, context);
+          const freshReplayControl = await freshEpoch.validateSegment(replayAcrossRefresh);
+          await freshEpoch.free();
+          const refresh = await handle.updateInit('video/mp4', replacement);
+          const refreshedReplay = await handle.validateSegment(replayAcrossRefresh);
           const refreshPreservedSequence = await handle.validateSegment(
             await fixture('refresh-1.m4s')
           );
@@ -211,6 +220,7 @@ for (const mode of ['normal', 'inline', 'external']) {
           }
           return {
             rejected,
+            rejectionErrors,
             first,
             replay,
             replayId,
@@ -226,6 +236,8 @@ for (const mode of ['normal', 'inline', 'external']) {
             reset,
             afterReset,
             refresh,
+            freshReplayControl,
+            refreshedReplay,
             refreshPreservedSequence,
             oldEpoch,
             nextEpoch,
@@ -244,6 +256,7 @@ for (const mode of ['normal', 'inline', 'external']) {
           'verifyAfterReading',
           'verifyTrust',
           'verifyTimestampTrust',
+          'strictV1',
           'tampered',
           'wrong-leaf',
           'mixed-keys',
@@ -254,6 +267,14 @@ for (const mode of ['normal', 'inline', 'external']) {
           'duplicate-keys'
         ].sort()
       );
+      for (const [setting, path] of [
+        ['verifyAfterReading', 'verify_after_reading'],
+        ['verifyTrust', 'verify_trust'],
+        ['verifyTimestampTrust', 'verify_timestamp_trust']
+      ]) {
+        expect(result.rejectionErrors[setting]).toBe(`live validation requires verify.${path}=true`);
+      }
+      expect(result.rejectionErrors.strictV1).toBe('live validation requires detailed validation results (strict_v1_validation=false)');
       for (const key of [
         'first',
         'second',
@@ -261,6 +282,7 @@ for (const mode of ['normal', 'inline', 'external']) {
         'reset',
         'afterReset',
         'refresh',
+        'freshReplayControl',
         'nextEpoch',
         'drained'
       ] as const)
@@ -278,11 +300,16 @@ for (const mode of ['normal', 'inline', 'external']) {
         'invalidRefresh',
         'refreshPreservedReplay',
         'refreshPreservedSequence',
+        'refreshedReplay',
         'oldEpoch',
         'regression'
       ] as const)
         expect(result[key].valid, key).toBe(false);
       expect(result.second.hadFailures).toBe(true);
+      expect(result.refreshedReplay.statuses.some((status: any) =>
+        status.kind === 'failure' && status.code === 'livevideo.segment.invalid' &&
+        status.description.includes('emsg id must be unique')
+      )).toBe(true);
       expect(
         result.rejectedKeysRefresh.statuses.some(
           (s: any) => s.kind === 'failure'
@@ -372,4 +399,164 @@ for (const algorithm of ['ed25519', 'es256']) {
       )
     ).toBe(true);
   });
+}
+
+for (const mode of ['normal', 'external']) {
+  for (const algorithm of ['ed25519', 'es256']) {
+    test(`${mode} ${algorithm}: real Reader await queues, drains and aborts`, async ({ page }) => {
+      await page.goto(`/tools/vsi.html?mode=${mode}${mode === 'external' ? '&external=1' : ''}`);
+      await page.waitForFunction(() => (window as any).ready, undefined, { timeout: 60_000 });
+      const control = (action: string) => page.evaluate(async action => {
+        const response = await fetch(`/__vsi_gate/${action}`, { method: action === 'state' ? 'GET' : 'POST' });
+        if (!response.ok) throw new Error(`Gate ${action}: ${response.status}`);
+        return response.json();
+      }, action);
+      try {
+        await control('release');
+        const setup = await page.evaluate(async ({ mode, algorithm }) => {
+          const w = window as any;
+          const raw = await (await fetch('/tmp/vsi-fixtures/context.json')).json();
+          const roots = await (await fetch('/tmp/vsi-fixtures/gate-roots.txt')).text();
+          const context = new w.api.Context({
+            trust: { trustAnchors: roots, trustConfig: raw.trust.trust_config },
+            verify: { verifyAfterReading: true, verifyTrust: true, verifyTimestampTrust: true, ocspFetch: true }
+          });
+          const resolved = JSON.parse(await context.toJson());
+          resolved.core = { allowed_network_hosts: ['127.0.0.1'] };
+          const contextJson = JSON.stringify(resolved);
+          const wasm = await WebAssembly.compile(await (await fetch('/packages/c2pa-wasm/pkg/c2pa_bg.wasm')).arrayBuffer());
+          const create = () => w.api.createC2pa({ wasmSrc: wasm, ...(mode === 'external' ? {
+            workerSrc: new URL('/packages/c2pa-web/dist/c2pa_worker.js', location.href)
+          } : {}) });
+          const load = async (suffix: string) => (await fetch(`/tmp/vsi-fixtures/${algorithm}-gate-${suffix}`)).blob();
+          const [init, refresh, one, four, two] = await Promise.all([
+            load('original-init.mp4'), load('refresh-init.mp4'), load('original-1.m4s'),
+            load('original-4.m4s'), load('refresh-2.m4s')
+          ]);
+          const runtime = await create();
+          const tx = runtime.worker.tx;
+          const reader = await tx.reader_fromBlob('video/mp4', init, contextJson);
+          const store = await tx.reader_manifestStore(reader);
+          await tx.reader_free(reader);
+          const codes = store.validation_results.activeManifest.success.map((status: any) => status.code);
+          if (store.validation_state !== 'Trusted' || !codes.includes('signingCredential.ocsp.notRevoked')) {
+            throw new Error(`Gate Reader did not verify the OCSP fixture: ${JSON.stringify(store.validation_results)}`);
+          }
+          const id = await tx.live_fromInit('video/mp4', init, contextJson);
+          const first = await tx.live_validateSegment(id, one);
+          const gap = await tx.live_validateSegment(id, four);
+          w.gated = { runtime, create, contextJson, init, refresh, one, four, two, id, events: [] };
+          return { first, gap, state: store.validation_state, codes };
+        }, { mode, algorithm });
+        expect(setup.state).toBe('Trusted');
+        expect(setup.codes).toContain('signingCredential.ocsp.notRevoked');
+        expect(setup.first.valid && setup.gap.valid).toBe(true);
+
+        await control('arm');
+        await page.evaluate(() => {
+          const g = (window as any).gated;
+          const tx = g.runtime.worker.tx;
+          g.observe = (name: string, pending: Promise<any>) => pending.then(value => {
+            g.events.push(name);
+            return { name, value };
+          }, error => {
+            g.events.push(name);
+            return { name, error: String(error.message ?? error) };
+          });
+          g.refreshPending = g.observe('refresh', tx.live_updateInit(g.id, 'video/mp4', g.refresh));
+        });
+        await expect.poll(async () => (await control('state')).held).toBeGreaterThan(0);
+        await page.evaluate(() => {
+          const g = (window as any).gated;
+          const tx = g.runtime.worker.tx;
+          g.pending = Promise.all([
+            g.refreshPending,
+            g.observe('coverage', tx.live_sequenceCoverage(g.id)),
+            g.observe('reset', tx.live_resetContinuity(g.id)),
+            g.observe('validation', tx.live_validateSegment(g.id, g.two)),
+            g.observe('free', tx.live_free(g.id))
+          ]);
+          // This response is a receipt barrier: all earlier RPCs, including
+          // closing free, reached the worker while the real Reader awaits OCSP.
+          g.closed = tx.live_sequenceCoverage(g.id).then(() => 'unexpected success',
+            (error: Error) => error.message);
+        });
+        expect(await page.evaluate(() => (window as any).gated.closed)).toContain('closing live validator');
+        expect(await page.evaluate(() => (window as any).gated.events)).toEqual([]);
+        await control('release');
+        const drained = await page.evaluate(async () => {
+          const g = (window as any).gated;
+          const outcomes = await g.pending;
+          await g.runtime.worker.tx.live_free(g.id);
+          const stale = await g.runtime.worker.tx.live_sequenceCoverage(g.id).then(() => 'unexpected success',
+            (error: Error) => error.message);
+          g.runtime.dispose();
+          return { outcomes, events: g.events, stale };
+        });
+        expect(drained.events).toEqual(['refresh', 'coverage', 'reset', 'validation', 'free']);
+        expect(drained.outcomes.every((outcome: any) => outcome.error === undefined), JSON.stringify(drained)).toBe(true);
+        for (const index of [0, 2, 3]) expect(drained.outcomes[index].value.valid).toBe(true);
+        const coverage = { missingRanges: [['2', '3']], totalMissing: '2', rangesTruncated: false };
+        expect(drained.outcomes[1].value).toEqual(coverage);
+        expect(drained.outcomes[2].value.sequenceCoverage).toEqual(coverage);
+        expect(drained.outcomes[3].value.sequenceCoverage).toEqual(coverage);
+        expect(drained.stale).toContain('Unknown or closing live validator');
+
+        // Dispose while an actual WASM admission is held inside Reader, not
+        // while the JS Context is still resolving trust-anchor URLs.
+        await page.evaluate(async () => {
+          const g = (window as any).gated;
+          g.runtime = await g.create();
+          g.events = [];
+        });
+        await control('arm');
+        await page.evaluate(() => {
+          const g = (window as any).gated;
+          g.admission = g.runtime.worker.tx.live_fromInit('video/mp4', g.init, g.contextJson)
+            .then(() => 'unexpected success', (error: Error) => error.message);
+        });
+        await expect.poll(async () => (await control('state')).held).toBeGreaterThan(0);
+        expect(await page.evaluate(async () => {
+          const g = (window as any).gated;
+          g.runtime.dispose();
+          return g.admission;
+        })).toBe('C2pa worker disposed');
+        await control('release');
+
+        await page.evaluate(async () => {
+          const g = (window as any).gated;
+          g.runtime = await g.create();
+          g.id = await g.runtime.worker.tx.live_fromInit('video/mp4', g.init, g.contextJson);
+        });
+        await control('arm');
+        await page.evaluate(() => {
+          const g = (window as any).gated;
+          const tx = g.runtime.worker.tx;
+          g.refreshPending = tx.live_updateInit(g.id, 'video/mp4', g.refresh)
+            .then(() => 'unexpected success', (error: Error) => error.message);
+        });
+        await expect.poll(async () => (await control('state')).held).toBeGreaterThan(0);
+        await page.evaluate(() => {
+          const g = (window as any).gated;
+          const tx = g.runtime.worker.tx;
+          const error = (reason: Error) => reason.message;
+          g.aborted = Promise.all([
+            g.refreshPending,
+            tx.live_sequenceCoverage(g.id).then(() => 'unexpected success', error),
+            tx.live_free(g.id).then(() => 'unexpected success', error)
+          ]);
+          g.closed = tx.live_sequenceCoverage(g.id).then(() => 'unexpected success', error);
+        });
+        expect(await page.evaluate(() => (window as any).gated.closed)).toContain('closing live validator');
+        expect(await page.evaluate(async () => {
+          const g = (window as any).gated;
+          g.runtime.dispose();
+          return g.aborted;
+        })).toEqual(['C2pa worker disposed', 'C2pa worker disposed', 'C2pa worker disposed']);
+      } finally {
+        await control('release');
+        await page.evaluate(() => (window as any).gated?.runtime.dispose());
+      }
+    });
+  }
 }

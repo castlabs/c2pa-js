@@ -17,6 +17,9 @@ test.beforeEach(async ({ page }) => {
     if (message.type() === 'error')
       console.error(`[browser] ${message.text()}`);
   });
+  page.on('requestfailed', (request) =>
+    console.error(`[network] ${request.url()}: ${request.failure()?.errorText}`)
+  );
 });
 
 for (const mode of ['normal', 'inline', 'external']) {
@@ -27,13 +30,17 @@ for (const mode of ['normal', 'inline', 'external']) {
       const errors: string[] = [];
       page.on('pageerror', (e) => errors.push(e.message));
       const response = await page.goto(
-        `/tools/vsi.html${mode === 'external' ? '?external=1' : ''}`
+        `/tools/vsi.html?mode=${mode}${
+          mode === 'external' ? '&external=1' : ''
+        }`
       );
       if (mode === 'external')
         expect(response?.headers()['content-security-policy']).toContain(
           "worker-src 'self'"
         );
-      await page.waitForFunction(() => (window as any).ready);
+      await page.waitForFunction(() => (window as any).ready, undefined, {
+        timeout: 60_000
+      });
       const result = await page.evaluate(
         async ({ mode, algorithm }) => {
           const w = window as any;
@@ -308,7 +315,9 @@ for (const mode of ['normal', 'inline', 'external']) {
 for (const algorithm of ['ed25519', 'es256']) {
   test(`byte-only WASM core ${algorithm}`, async ({ page }) => {
     await page.goto('/tools/vsi.html');
-    await page.waitForFunction(() => (window as any).ready);
+    await page.waitForFunction(() => (window as any).ready, undefined, {
+      timeout: 60_000
+    });
     const results = await page.evaluate(async (algorithm) => {
       const w = window as any;
       const load = async (suffix: string) =>

@@ -8,7 +8,11 @@
  */
 
 import * as api from '../packages/c2pa-web/dist/index.js';
-import * as inlineApi from '../packages/c2pa-web/dist/inline.js';
 import initWasm, * as wasmApi from '../packages/c2pa-wasm/pkg/c2pa.js';
+
+const inlineApi =
+  new URLSearchParams(location.search).get('mode') === 'inline'
+    ? await import('../packages/c2pa-web/dist/inline.js')
+    : undefined;
 
 Object.assign(window, { api, inlineApi, wasmApi, initWasm, ready: true });

@@ -9,6 +9,16 @@
 
 import { test, expect } from '@playwright/test';
 
+test.beforeEach(async ({ page }) => {
+  page.on('pageerror', (error) =>
+    console.error(`[pageerror] ${error.message}`)
+  );
+  page.on('console', (message) => {
+    if (message.type() === 'error')
+      console.error(`[browser] ${message.text()}`);
+  });
+});
+
 for (const mode of ['normal', 'inline', 'external']) {
   for (const algorithm of ['ed25519', 'es256']) {
     test(`${mode} ${algorithm}: trusted admission, continuity, refresh and lifecycle`, async ({
@@ -31,18 +41,21 @@ for (const mode of ['normal', 'inline', 'external']) {
           const raw = await (
             await fetch('/tmp/vsi-fixtures/context.json')
           ).json();
-          function camel(value: any): any {
-            if (Array.isArray(value)) return value.map(camel);
-            if (value && typeof value === 'object')
-              return Object.fromEntries(
-                Object.entries(value).map(([k, v]) => [
-                  k.replace(/_([a-z])/g, (_, c) => c.toUpperCase()),
-                  camel(v)
-                ])
-              );
-            return value;
-          }
-          const settings = camel(raw);
+          // Context takes public web Settings, not the native trust.anchors wire shape.
+          const settings = {
+            trust: {
+              trustAnchors: raw.trust.anchors
+                .filter((anchor: any) => anchor.trust_kind === 'manifest')
+                .map((anchor: any) => anchor.trust_anchors)
+                .join('\n'),
+              trustConfig: raw.trust.trust_config
+            },
+            verify: {
+              verifyAfterReading: true,
+              verifyTrust: true,
+              verifyTimestampTrust: true
+            }
+          };
           const bytes = await (
             await fetch('/packages/c2pa-wasm/pkg/c2pa_bg.wasm')
           ).arrayBuffer();
@@ -236,7 +249,10 @@ for (const mode of ['normal', 'inline', 'external']) {
         'nextEpoch',
         'drained'
       ] as const)
-        expect(result[key].valid, key).toBe(true);
+        expect(
+          result[key].valid,
+          `${key}: ${JSON.stringify(result[key])}`
+        ).toBe(true);
       for (const key of [
         'replay',
         'replayId',
@@ -253,7 +269,9 @@ for (const mode of ['normal', 'inline', 'external']) {
         expect(result[key].valid, key).toBe(false);
       expect(result.second.hadFailures).toBe(true);
       expect(
-        result.rejectedKeysRefresh.statuses.some((s: any) => s.kind === 'failure')
+        result.rejectedKeysRefresh.statuses.some(
+          (s: any) => s.kind === 'failure'
+        )
       ).toBe(true);
       expect(
         result.second.statuses.every((s: any) => s.kind !== 'failure')
@@ -320,7 +338,10 @@ for (const algorithm of ['ed25519', 'es256']) {
         late.free();
       }
     }, algorithm);
-    expect(results.every((r: any) => r.valid)).toBe(true);
+    expect(
+      results.every((r: any) => r.valid),
+      JSON.stringify(results)
+    ).toBe(true);
     expect(results[1].sequenceCoverage).toEqual({
       missingRanges: [['2', '3']],
       totalMissing: '2',

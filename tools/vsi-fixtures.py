@@ -158,7 +158,7 @@ for algorithm in ("ed25519", "es256"):
                         event_id = sequence + (100 if epoch == "refresh" else 0)
                         def emsg(payload, signature):
                             cose_bytes = cbor2.dumps(cbor2.CBORTag(18, [protected_media, {4: kid}, payload, signature]))
-                            body = bytes(4) + b"urn:c2pa:verifiable-segment-info\0browser-ci\0" + timescale.to_bytes(4, "big") + bytes(4) + duration.to_bytes(4, "big") + event_id.to_bytes(4, "big") + cose_bytes
+                            body = bytes(4) + b"urn:c2pa:verifiable-segment-info\0fseg\0" + timescale.to_bytes(4, "big") + bytes(4) + duration.to_bytes(4, "big") + event_id.to_bytes(4, "big") + cose_bytes
                             return (len(body) + 8).to_bytes(4, "big") + b"emsg" + body
                         info = {"sequenceNumber": sequence, "manifestId": session.reserved_manifest_id(), "bmffHash": cbor2.loads(c2pa.trusted_vsi_hash_template(c2pa.TrustedVsiInputKind.MEDIA_HASH))}
                         placeholder = emsg(cbor2.dumps(info), bytes(64))
@@ -171,7 +171,7 @@ for algorithm in ("ed25519", "es256"):
                         if epoch == "original" and sequence == 4:
                             # EMSG framing is excluded from the media hash. These
                             # retain a real valid COSE signature and hard binding.
-                            framing = 12 + len(b"urn:c2pa:verifiable-segment-info\0browser-ci\0")
+                            framing = 12 + len(b"urn:c2pa:verifiable-segment-info\0fseg\0")
                             replay = bytearray(final)
                             replay[framing + 12:framing + 16] = (1).to_bytes(4, "big")
                             (out / f"{algorithm}-replay-id.m4s").write_bytes(place(media, replay))

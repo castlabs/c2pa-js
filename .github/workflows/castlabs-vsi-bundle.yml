@@ -1,0 +1,221 @@
+name: Castlabs VSI Bundle
+
+on:
+  pull_request:
+    branches: [feat/live-video-vsi, feat/vsi-browser-api, ci/vsi-browser-bundle]
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Full source SHA (must match the selected workflow ref)
+        required: true
+        type: string
+      bundle_version:
+        description: Castlabs bundle version (independent of package versions)
+        required: true
+        default: '1.0.8'
+        type: string
+      publish:
+        description: Create a NEW draft only, after qualified merged SDK inputs and all gates
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vsi-bundle-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || inputs.source_sha }}
+      BUNDLE_VERSION: ${{ inputs.bundle_version || '1.0.8' }}
+      CARGO_BUILD_JOBS: 2
+      CARGO_INCREMENTAL: 0
+      CARGO_PROFILE_DEV_DEBUG: 0
+      CARGO_PROFILE_RELEASE_DEBUG: 0
+      NX_DAEMON: 'false'
+    outputs:
+      source_sha: ${{ steps.identity.outputs.source_sha }}
+    steps:
+      - name: Validate requested workflow/source identity
+        id: identity
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$BUNDLE_VERSION" = 1.0.8
+          if [ "$EVENT_NAME" = workflow_dispatch ]; then test "$SOURCE_SHA" = "$GITHUB_SHA"; fi
+          printf 'source_sha=%s\n' "$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: castlabs/c2pa-python
+          ref: 466707025658fd2fd5343d74b06f7081db09e64c
+          path: tmp/vsi-python-reference
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Input identity and lightweight helper tests
+        run: |
+          node tools/vsi-release.mjs verify . "$RUNNER_TEMP/vsi-bundle" "$SOURCE_SHA" "$BUNDLE_VERSION"
+          node --test tools/vsi-release.test.mjs
+          node tools/check-castlabs-source.mjs
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - uses: dtolnay/rust-toolchain@1.96.0
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: vsi-bundle-release-1
+          workspaces: '. -> dist/target'
+      - name: Exact release tools (no cargo install)
+        run: |
+          mkdir -p "$RUNNER_TEMP/vsi-tools" "$RUNNER_TEMP/vsi-bundle"
+          curl --fail --location --retry 3 https://github.com/wasm-bindgen/wasm-bindgen/releases/download/0.2.129/wasm-bindgen-0.2.129-x86_64-unknown-linux-musl.tar.gz -o "$RUNNER_TEMP/vsi-tools/bindgen.tar.gz"
+          tar -xzf "$RUNNER_TEMP/vsi-tools/bindgen.tar.gz" -C "$RUNNER_TEMP/vsi-tools"
+          printf '%s\n' "$RUNNER_TEMP/vsi-tools/wasm-bindgen-0.2.129-x86_64-unknown-linux-musl" >> "$GITHUB_PATH"
+          curl --fail --location --retry 3 https://github.com/WebAssembly/binaryen/releases/download/version_124/binaryen-version_124-node.tar.gz -o "$RUNNER_TEMP/vsi-tools/binaryen.tar.gz"
+          tar -xzf "$RUNNER_TEMP/vsi-tools/binaryen.tar.gz" -C "$RUNNER_TEMP/vsi-tools"
+          mv "$RUNNER_TEMP/vsi-tools/binaryen-version_124/wasm-opt.js" "$RUNNER_TEMP/vsi-tools/binaryen-version_124/wasm-opt.cjs"
+      - name: Locked release WASM, bindings, optimization and SRI (one Cargo WASM build)
+        run: |
+          cargo build --locked --release -p c2pa-wasm --target wasm32-unknown-unknown
+          wasm-bindgen dist/target/wasm32-unknown-unknown/release/c2pa_wasm.wasm --out-dir packages/c2pa-wasm/pkg --out-name c2pa --target web --omit-default-module-path
+          node "$RUNNER_TEMP/vsi-tools/binaryen-version_124/wasm-opt.cjs" packages/c2pa-wasm/pkg/c2pa_bg.wasm -o packages/c2pa-wasm/pkg/c2pa_bg.wasm -Oz
+          node tools/vsi-bindings.mjs
+          node --input-type=module <<'NODE'
+          import { run, hash, save } from './tools/vsi-release.mjs';
+          import { readFileSync } from 'node:fs';
+          const temp = process.env.RUNNER_TEMP;
+          const tools = {
+            node: run('node', ['--version']), pnpm: run('pnpm', ['--version']),
+            rustc: run('rustc', ['-Vv']), cargo: run('cargo', ['--version']),
+            wasmBindgen: run('wasm-bindgen', ['--version']),
+            binaryen: run('node', [`${temp}/vsi-tools/binaryen-version_124/wasm-opt.cjs`, '--version']),
+            archiveSha256: Object.fromEntries(['bindgen', 'binaryen'].map(name => [name, hash(readFileSync(`${temp}/vsi-tools/${name}.tar.gz`))])),
+            cargoWasmSha256: hash(readFileSync('dist/target/wasm32-unknown-unknown/release/c2pa_wasm.wasm'))
+          };
+          if (tools.wasmBindgen !== 'wasm-bindgen 0.2.129' || !/^wasm-opt version 124\b/.test(tools.binaryen)) throw new Error('Tool mismatch');
+          save(`${temp}/vsi-bundle/tool-versions.json`, tools);
+          NODE
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Published old-SDK interop fixtures, not a new SDK fixture build
+        run: |
+          curl --fail --location --retry 3 https://github.com/castlabs/c2pa-python/releases/download/castlabs-v0.37.13.dev2/c2pa_python-0.37.13.dev2-py3-none-manylinux_2_28_x86_64.whl -o tmp/c2pa_python-0.37.13.dev2-py3-none-manylinux_2_28_x86_64.whl
+          printf '%s  %s\n' 5b9a4bd5f56b0fdcd4dc27f42569524677505e0744b51566da7908c836ac0bfb tmp/c2pa_python-0.37.13.dev2-py3-none-manylinux_2_28_x86_64.whl | sha256sum -c -
+          pip install --only-binary=:all: tmp/c2pa_python-0.37.13.dev2-py3-none-manylinux_2_28_x86_64.whl cbor2==6.1.5 cryptography==50.0.2
+          curl --fail --location --retry 3 https://github.com/castlabs/c2pa-python/releases/download/castlabs-v0.37.13.dev2/c2pa-python-0.37.13.dev2-py3-none-wheels.tar.gz.evidence.json -o tmp/vsi-wheel-evidence.json
+          python tools/vsi-fixtures.py tmp/vsi-python-reference tmp/vsi-fixtures tmp/vsi-wheel-evidence.json
+      - name: Locked type generation, utilities and web/worker build
+        run: |
+          mkdir -p packages/c2pa-types/schemas
+          (cd packages/c2pa-types && cargo run --locked -p c2pa-types && node generate-ci.mjs && pnpm exec tsc)
+          pnpm --dir packages/c2pa-utilities exec tsc --project tsconfig.lib.json
+          pnpm --dir packages/c2pa-web exec vite build
+          pnpm --dir packages/c2pa-web exec eslint .
+      - name: Install CI browsers
+        run: pnpm --dir packages/c2pa-web exec playwright install --with-deps chromium firefox webkit
+      - name: Queue and lifecycle unit gate
+        run: pnpm exec vitest run --config tools/vsi-unit.config.ts --reporter=json --outputFile="$RUNNER_TEMP/vsi-bundle/queue.json"
+      - name: Full source browser suites, including fragment regressions (no waivers)
+        run: |
+          failed=0
+          for browser in chromium firefox webkit; do
+            pnpm --dir packages/c2pa-web exec vitest run --browser="$browser" --testTimeout=60000 --no-file-parallelism --reporter=json --outputFile="$RUNNER_TEMP/vsi-bundle/source-$browser.json" || failed=1
+          done
+          exit "$failed"
+      - name: Source real Ed25519/ES256 and strict-CSP qualification
+        run: |
+          # Inherited Vitest build plugin rewrites web dist. No Rust/WASM rebuild.
+          pnpm --dir packages/c2pa-web exec vite build
+          openssl req -x509 -newkey rsa:2048 -nodes -keyout tmp/vsi-server.key -out tmp/vsi-server.crt -days 1 -subj /CN=localhost -addext subjectAltName=IP:127.0.0.1
+          node node_modules/vite/bin/vite.js --config tools/vsi-vite.config.ts > tmp/vsi-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true; wait "$SERVER_PID" || true' EXIT
+          ready=false
+          for attempt in $(seq 1 60); do
+            if curl -fsSk https://127.0.0.1:4173/tools/vsi.html > /dev/null; then ready=true; break; fi
+            sleep 1
+          done
+          test "$ready" = true
+          PLAYWRIGHT_JSON_OUTPUT_NAME="$RUNNER_TEMP/vsi-bundle/source-vsi.json" pnpm --dir packages/c2pa-web exec playwright test --config playwright.vsi.config.ts --reporter=json
+      - name: Pack exactly four packages with final absolute release URLs
+        run: node tools/vsi-release.mjs pack . "$RUNNER_TEMP/vsi-bundle" "$SOURCE_SHA" "$BUNDLE_VERSION"
+      - name: Isolated install, installed bytes/types/exports/WASM and all installed browser cases
+        run: node tools/vsi-consumer.mjs . "$RUNNER_TEMP/vsi-bundle" "$RUNNER_TEMP/vsi-consumer" "$SOURCE_SHA" "$BUNDLE_VERSION"
+      - name: Seal passing build evidence and checksums (not permission to publish)
+        run: node tools/vsi-release.mjs seal . "$RUNNER_TEMP/vsi-bundle" "$SOURCE_SHA" "$BUNDLE_VERSION"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: castlabs-vsi-bundle-${{ steps.identity.outputs.source_sha }}-attempt-${{ github.run_attempt }}
+          if-no-files-found: error
+          path: ${{ runner.temp }}/vsi-bundle
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: castlabs-vsi-diagnostics-${{ steps.identity.outputs.source_sha }}-attempt-${{ github.run_attempt }}
+          path: |
+            tmp/vsi-fixtures
+            tmp/vsi-server.log
+
+  publish:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish == true
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      SOURCE_SHA: ${{ needs.build.outputs.source_sha }}
+      BUNDLE_VERSION: ${{ inputs.bundle_version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v4
+        with:
+          name: castlabs-vsi-bundle-${{ env.SOURCE_SHA }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/qualified
+      - name: Fail-closed source, inputs, readiness, evidence and same-artifact guard
+        run: |
+          node tools/vsi-release.mjs guard . "$RUNNER_TEMP/qualified" "$SOURCE_SHA" "$BUNDLE_VERSION"
+          node tools/vsi-release.mjs sdk-proof . "$RUNNER_TEMP/sdk-identity" "$SOURCE_SHA" "$BUNDLE_VERSION"
+      - name: Create NEW draft only, never overwrite a tag/release or publish npm
+        env:
+          GH_REPO: ${{ github.repository }}
+        run: |
+          test "$GH_REPO" = castlabs/c2pa-js
+          tag="v$BUNDLE_VERSION"
+          # API failures (including authorization/network failures) are not treated as absence.
+          gh api --paginate "repos/$GH_REPO/git/matching-refs/tags/$tag" > "$RUNNER_TEMP/refs.json"
+          gh api --paginate --slurp "repos/$GH_REPO/releases?per_page=100" > "$RUNNER_TEMP/releases.json"
+          TAG="$tag" node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          const tag = process.env.TAG;
+          assert.ok(!JSON.parse(readFileSync(`${process.env.RUNNER_TEMP}/refs.json`)).some(r => r.ref === `refs/tags/${tag}`), 'Tag already exists');
+          assert.ok(!JSON.parse(readFileSync(`${process.env.RUNNER_TEMP}/releases.json`)).flat().some(r => r.tag_name === tag), 'Release already exists');
+          NODE
+          gh release create "$tag" "$RUNNER_TEMP/qualified/"* --target "$SOURCE_SHA" --draft --title "Castlabs VSI bundle $BUNDLE_VERSION" --notes "Qualified four-package browser VSI bundle. See provenance.json and SHA256SUMS. Unsigned provenance; interop fixtures retain their old SDK provenance. Review before publication. No npm publication."

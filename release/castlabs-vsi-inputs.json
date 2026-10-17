@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "bundleVersion": "1.0.8",
+  "sdkSha": "6021100cc5060b06061ca15b634281cfeb97c718",
+  "releaseReady": true,
+  "sdkStatus": "qualified-functional",
+  "qualifiedSdkSha": "6021100cc5060b06061ca15b634281cfeb97c718",
+  "qualificationEvidence": [
+    "https://github.com/castlabs/c2pa-rs/actions/runs/39004446457",
+    "https://github.com/castlabs/c2pa-js/actions/runs/39006782520",
+    "https://github.com/castlabs/c2pa-js/actions/runs/39006953532"
+  ],
+  "sdkIntegration": {
+    "repository": "castlabs/c2pa-rs",
+    "targetRef": "feat/trusted-vsi-functional",
+    "requiredPRs": [27, 28, 29],
+    "mergeCommits": {
+      "27": "6ce147fb443b44d356a00d72b58e5ff3a7bbd401",
+      "28": "7a1559dfbc2a0064c1e65d66a11d32ba35d5f78e",
+      "29": "6021100cc5060b06061ca15b634281cfeb97c718"
+    },
+    "nativeQualification": {
+      "runId": "39004446457",
+      "headSha": "6021100cc5060b06061ca15b634281cfeb97c718",
+      "workflowPath": ".github/workflows/castlabs-live-video-qualification.yml"
+    }
+  },
+  "publicationBlocker": null,
+  "packages": {
+    "c2pa-types": "0.7.5",
+    "c2pa-wasm": "0.13.2",
+    "c2pa-utilities": "0.3.1",
+    "c2pa-web": "0.15.3"
+  },
+  "tools": { "wasmBindgen": "0.2.129", "binaryen": "124" },
+  "interopFixture": {
+    "pythonSha": "466707025658fd2fd5343d74b06f7081db09e64c",
+    "sdkSha": "afd6fffe5a066e0b5b1a14f3f8c7ac189e7f0c95",
+    "wheelVersion": "0.37.13.dev2",
+    "wheelSha256": "5b9a4bd5f56b0fdcd4dc27f42569524677505e0744b51566da7908c836ac0bfb"
+  }
+}

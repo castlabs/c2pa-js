@@ -3,7 +3,6 @@
 Recipe adapted from c2pa-python 466707025658fd2fd5343d74b06f7081db09e64c
 tests/test_trusted_vsi_api.py. These are test credentials, not production trust.
 """
-import copy
 import hashlib
 import io
 import json
@@ -123,12 +122,11 @@ for algorithm in ("ed25519", "es256"):
     payload = cbor2.dumps(leaf)
     binding = cbor2.CBORTag(18, [protected, {}, payload, sign(cbor2.dumps(["Signature1", protected, b"", payload]))])
     good = {"key": cose, "minSequenceNumber": 1, "createdAt": cbor2.CBORTag(0, "2026-09-10T00:00:00Z"), "validityPeriod": 86400, "signerBinding": binding}
-    wrong = copy.deepcopy(good)
+    wrong = dict(good)
     wrong_payload = cbor2.dumps(leaf + b"wrong-leaf")
     wrong["signerBinding"] = cbor2.CBORTag(18, [protected, {}, wrong_payload, sign(cbor2.dumps(["Signature1", protected, b"", wrong_payload]))])
-    mixed = copy.deepcopy(wrong)
-    mixed["key"][2] = b"different-kid"
-    bad_keys[algorithm] = {"wrong-leaf": [wrong], "mixed-keys": [good, mixed], "empty-keys": []}
+    mixed = {**wrong, "key": {**wrong["key"], 2: b"different-kid"}}
+    bad_keys[algorithm] = {"wrong-leaf": [wrong], "mixed-keys": [good, mixed], "empty-keys": [], "missing-keys": [], "malformed-keys": [{}], "prefix-keys": [good], "duplicate-keys": [good]}
 
     for epoch in ("original", "refresh"):
         with claim_signer() as signer:
@@ -164,11 +162,33 @@ for algorithm in ("ed25519", "es256"):
                         final = emsg(payload, signature)
                         assert len(final) == len(placeholder)
                         (out / f"{algorithm}-{epoch}-{sequence}.m4s").write_bytes(place(media, final))
+                        if epoch == "original" and sequence == 4:
+                            # EMSG framing is excluded from the media hash. These
+                            # retain a real valid COSE signature and hard binding.
+                            framing = 12 + len(b"urn:c2pa:verifiable-segment-info\0browser-ci\0")
+                            replay = bytearray(final)
+                            replay[framing + 12:framing + 16] = (1).to_bytes(4, "big")
+                            (out / f"{algorithm}-replay-id.m4s").write_bytes(place(media, replay))
+                            wrong_time = bytearray(final)
+                            wrong_time[framing + 8:framing + 12] = (duration + 1).to_bytes(4, "big")
+                            (out / f"{algorithm}-wrong-time.m4s").write_bytes(place(media, wrong_time))
+                            wrong_track = bytearray(media)
+                            track_offset = wrong_track.index(b"tfhd") + 8
+                            track_id = int.from_bytes(wrong_track[track_offset:track_offset + 4], "big")
+                            wrong_track[track_offset:track_offset + 4] = (track_id + 1).to_bytes(4, "big")
+                            info["bmffHash"] = cbor2.loads(canonical(c2pa.TrustedVsiInputKind.MEDIA_HASH, place(wrong_track, placeholder)))
+                            payload = cbor2.dumps(info)
+                            signature = session.sign_sig_structure(cbor2.dumps(["Signature1", protected_media, b"", payload]), sequence)
+                            (out / f"{algorithm}-wrong-track.m4s").write_bytes(place(wrong_track, emsg(payload, signature)))
 
     for name, keys in bad_keys[algorithm].items():
         data = cbor2.dumps({"keys": keys})
         with claim_signer() as signer:
-            signer.add_dynamic_assertion(lambda *_: data, label="c2pa.session-keys", reserve_size=len(data))
+            if name != "missing-keys":
+                label = "c2pa.session-keys.extra" if name == "prefix-keys" else "c2pa.session-keys"
+                signer.add_dynamic_assertion(lambda *_: data, label=label, reserve_size=len(data))
+            if name == "duplicate-keys":
+                signer.add_dynamic_assertion(lambda *_: data, label="c2pa.session-keys__1", reserve_size=len(data))
             with c2pa.Context.from_dict(settings, signer=signer) as context:
                 with c2pa.Builder(manifest, context=context) as builder:
                     output = io.BytesIO()

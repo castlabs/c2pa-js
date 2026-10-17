@@ -1,0 +1,82 @@
+name: Castlabs VSI Publish Existing Draft
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_tag:
+        description: 'Publish the reviewed existing v1.0.8 draft publicly (type v1.0.8)'
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: castlabs-vsi-publish-existing-v1.0.8
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    if: github.repository == 'castlabs/c2pa-js' && github.ref == 'refs/heads/main' && inputs.confirm_tag == 'v1.0.8'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: automation
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: acfa8dd64f499e5f0c459e534b5b5d2437fb5197
+          path: source
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: No-network publication guard tests
+        run: node --test automation/tools/vsi-promote.test.mjs
+      - name: Verify original run, seal, SDK metadata and unchanged draft; publish exact bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CONFIRM_TAG: ${{ inputs.confirm_tag }}
+        run: node automation/tools/vsi-promote.mjs promote "$GITHUB_WORKSPACE/source" "$RUNNER_TEMP/vsi-promotion"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vsi-promotion-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/vsi-promotion/promotion.json
+
+  public-smoke:
+    needs: promote
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: automation
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Anonymous final URL install, graph, byte, export, type and WASM checks
+        run: node automation/tools/vsi-public-consumer.mjs "$RUNNER_TEMP/vsi-public-smoke"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vsi-public-consumer-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/vsi-public-smoke/public-consumer.json
+            ${{ runner.temp }}/vsi-public-smoke/public-consumer-graph.json
+            ${{ runner.temp }}/vsi-public-smoke/public-consumer-pnpm-lock.yaml

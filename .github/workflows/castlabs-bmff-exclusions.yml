@@ -1,0 +1,91 @@
+name: Castlabs Generic BMFF Exclusions
+
+on:
+  pull_request:
+    branches: [feat/js-109-builder-exclusions, feat/live-video-vsi]
+    paths:
+      - '.github/workflows/castlabs-bmff-exclusions.yml'
+      - 'tools/bmff-exclusion-*'
+      - 'release/bmff-exclusion-*'
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Full source SHA, must match selected workflow ref
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bmff-exclusions-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  qualification:
+    if: github.repository == 'castlabs/c2pa-js'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || inputs.source_sha }}
+      NX_DAEMON: 'false'
+    steps:
+      - name: Check requested source identity
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          if [ "$EVENT_NAME" = workflow_dispatch ]; then test "$SOURCE_SHA" = "$GITHUB_SHA"; fi
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          persist-credentials: false
+      # Source/data only: never install these checkouts or compile their native code.
+      - uses: actions/checkout@v4
+        with:
+          repository: castlabs/c2pa-python
+          ref: 98ccd6de63d89eca9c23f27658f6b29fe99daffc
+          path: tmp/bmff-python-reference
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: castlabs/c2pa-rs
+          ref: 6021100cc5060b06061ca15b634281cfeb97c718
+          path: tmp/bmff-sdk-reference
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download and authenticate published SDK602 inputs
+        run: node tools/bmff-exclusion-inputs.mjs release/bmff-exclusion-inputs.json "$RUNNER_TEMP/bmff-inputs"
+      - name: Install only the exact published binary wheel, no sdist or native build
+        run: python -m pip install --only-binary=:all: --no-deps "$RUNNER_TEMP/bmff-inputs/c2pa_python-0.37.13+signer.1.0.9-py3-none-manylinux_2_28_x86_64.whl"
+      - name: Generate fixtures and independently check every native binding verdict
+        run: python tools/bmff-exclusion-fixtures.py tmp/bmff-python-reference tmp/bmff-sdk-reference "$RUNNER_TEMP/bmff-fixtures"
+      # Tool installation only. No Nx, Cargo, wasm-bindgen, schema or package build.
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Install three CI browsers
+        run: pnpm --dir packages/c2pa-web exec playwright install --with-deps chromium firefox webkit
+      - name: Localhost HTTPS certificate for installed external worker
+        run: openssl req -x509 -newkey rsa:2048 -nodes -keyout tmp/bmff-server.key -out tmp/bmff-server.crt -days 1 -subj /CN=localhost -addext subjectAltName=IP:127.0.0.1
+      - name: Installed Reader matrix, one worker, no retries or skipped cases
+        run: node tools/bmff-exclusion-consumer.mjs . "$RUNNER_TEMP/bmff-inputs" "$RUNNER_TEMP/bmff-fixtures" "$RUNNER_TEMP/bmff-consumer" "$RUNNER_TEMP/bmff-reports"
+      - name: Retain immutable fixture and browser evidence, including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bmff-exclusions-${{ env.SOURCE_SHA }}-attempt-${{ github.run_attempt }}
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/bmff-fixtures
+            ${{ runner.temp }}/bmff-reports
+            ${{ runner.temp }}/bmff-inputs/qualification-inputs.json
+            ${{ runner.temp }}/bmff-inputs/python-wheel-evidence.json

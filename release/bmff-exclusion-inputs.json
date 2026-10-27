@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "scope": "JS 1.0.9 qualification using unchanged published SDK602 browser artifacts; not final 1.0.9 bundle evidence",
+  "sdkSha": "6021100cc5060b06061ca15b634281cfeb97c718",
+  "browser": {
+    "bundleVersion": "1.0.8",
+    "sourceSha": "acfa8dd64f499e5f0c459e534b5b5d2437fb5197",
+    "wasmSha256": "d69b9951b8d3b6aef990ae5b61dc75e5d883fbc103898dd8390c8cdcf6ca7094",
+    "provenanceUrl": "https://github.com/castlabs/c2pa-js/releases/download/v1.0.8/provenance.json",
+    "provenanceSha256": "8797734cbc857857355f01bc04c98df05857575f2ca9d758a9f77c0402d4cb36",
+    "packages": [
+      {
+        "name": "@stardustproof/c2pa-types",
+        "version": "0.7.5",
+        "file": "stardustproof-c2pa-types-0.7.5.tgz",
+        "sha256": "af8f550c318c79e63a7b58ffe48c5437efe31906e867e4e3f6888979d564da1e",
+        "url": "https://github.com/castlabs/c2pa-js/releases/download/v1.0.8/stardustproof-c2pa-types-0.7.5.tgz"
+      },
+      {
+        "name": "@stardustproof/c2pa-wasm",
+        "version": "0.13.2",
+        "file": "stardustproof-c2pa-wasm-0.13.2.tgz",
+        "sha256": "649460a4467fa9b8a0b16314619754ce5c006fe5ee3d6d13e0d9e068c6a2602b",
+        "url": "https://github.com/castlabs/c2pa-js/releases/download/v1.0.8/stardustproof-c2pa-wasm-0.13.2.tgz"
+      },
+      {
+        "name": "@stardustproof/c2pa-utilities",
+        "version": "0.3.1",
+        "file": "stardustproof-c2pa-utilities-0.3.1.tgz",
+        "sha256": "68c5546e7f7fe808870302c965f33fadafce9863468a0222c5955fde2cef0e5a",
+        "url": "https://github.com/castlabs/c2pa-js/releases/download/v1.0.8/stardustproof-c2pa-utilities-0.3.1.tgz"
+      },
+      {
+        "name": "@stardustproof/c2pa-web",
+        "version": "0.15.3",
+        "file": "stardustproof-c2pa-web-0.15.3.tgz",
+        "sha256": "68926494b8a6a6b691b078440eb25b159f91832d5364a95cef01ba7e4f2d692e",
+        "url": "https://github.com/castlabs/c2pa-js/releases/download/v1.0.8/stardustproof-c2pa-web-0.15.3.tgz"
+      }
+    ]
+  },
+  "python": {
+    "version": "0.37.13+signer.1.0.9",
+    "sourceSha": "98ccd6de63d89eca9c23f27658f6b29fe99daffc",
+    "sdkVersion": "0.92.0-dev",
+    "nativeSha256": "d356a7afe705381d3a4f7d2f7fbdb70aab2325ad7617cefd29d035a301ff7c99",
+    "wheel": {
+      "file": "c2pa_python-0.37.13+signer.1.0.9-py3-none-manylinux_2_28_x86_64.whl",
+      "url": "https://github.com/castlabs/c2pa-python/releases/download/castlabs-v0.37.13%2Bsigner.1.0.9/c2pa_python-0.37.13%2Bsigner.1.0.9-py3-none-manylinux_2_28_x86_64.whl",
+      "sha256": "62eb9eeb3778a1d2e46e66a5c579a6d2886fe378c71f505f957363f4516d229f"
+    },
+    "evidence": {
+      "url": "https://github.com/castlabs/c2pa-python/releases/download/castlabs-v0.37.13%2Bsigner.1.0.9/c2pa-python-0.37.13%2Bsigner.1.0.9-py3-none-wheels.tar.gz.evidence.json",
+      "sha256": "d18a91bda040c6897e6ca8f8e3f55ebcfbd7957de59cdf935e069b5b8bc819c5"
+    }
+  }
+}

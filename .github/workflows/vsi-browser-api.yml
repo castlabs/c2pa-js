@@ -20,9 +20,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: castlabs/c2pa-python
-          ref: 466707025658fd2fd5343d74b06f7081db09e64c
+          ref: 98ccd6de63d89eca9c23f27658f6b29fe99daffc
           path: tmp/vsi-python-reference
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.96.0
         with:
           targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
@@ -55,11 +55,9 @@ jobs:
           python-version: '3.12'
       - name: Install hash-pinned published fixture generator (no native build)
         run: |
-          curl -fL https://github.com/castlabs/c2pa-python/releases/download/castlabs-v0.37.13.dev2/c2pa_python-0.37.13.dev2-py3-none-manylinux_2_28_x86_64.whl -o tmp/c2pa_python-0.37.13.dev2-py3-none-manylinux_2_28_x86_64.whl
-          printf '%s  %s\n' 5b9a4bd5f56b0fdcd4dc27f42569524677505e0744b51566da7908c836ac0bfb tmp/c2pa_python-0.37.13.dev2-py3-none-manylinux_2_28_x86_64.whl | sha256sum -c -
-          pip install --only-binary=:all: tmp/c2pa_python-0.37.13.dev2-py3-none-manylinux_2_28_x86_64.whl cbor2==6.1.5 cryptography==50.0.2
-          curl -fL https://github.com/castlabs/c2pa-python/releases/download/castlabs-v0.37.13.dev2/c2pa-python-0.37.13.dev2-py3-none-wheels.tar.gz.evidence.json -o tmp/vsi-wheel-evidence.json
-          python tools/vsi-fixtures.py tmp/vsi-python-reference tmp/vsi-fixtures tmp/vsi-wheel-evidence.json
+          node tools/bmff-exclusion-inputs.mjs release/bmff-exclusion-inputs.json tmp/vsi-published --producer-only
+          python -m pip install --only-binary=:all: "tmp/vsi-published/c2pa_python-0.37.13+signer.1.0.9-py3-none-manylinux_2_28_x86_64.whl" cbor2==6.1.5 cryptography==50.0.2
+          python tools/vsi-fixtures.py tmp/vsi-python-reference tmp/vsi-fixtures tmp/vsi-published/python-wheel-evidence.json
       - name: Locked schema generation and browser packages
         id: packages
         run: |

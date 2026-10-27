@@ -106,14 +106,15 @@ reproducible-build claim is assumed.
   is reused, but not its repository root, filesystem permissions or resolution.
   Vite's filesystem boundary is the isolated consumer.
 - Generic BMFF fixtures and native verdicts generated using the same authenticated
-  Python wheel, SDK602 reference data and `release/bmff-exclusion-inputs.json`.
+  Python wheel and SDK602 reference data; the consumer authenticates their
+  identities against `release/bmff-exclusion-inputs.json`.
   After fresh packing and the VSI installed consumer, the generic consumer runs
   with `--candidate` against those fresh 1.0.9 tarballs, not published 1.0.8
   tarballs. Reports are retained under `$RUNNER_TEMP/vsi-bundle/bmff`; fixture,
-   native-verdict and authenticated producer diagnostics are uploaded on failure
-   as well as success. Sealing requires 96 native verdicts and 96 browser cases
-   per engine (288 total), with no skips or retries. Producer, source, fixture,
-   package and report hashes bind this evidence to the fresh candidate.
+  native-verdict and authenticated producer diagnostics are uploaded on failure
+  as well as success. Sealing requires 96 native verdicts and 96 browser cases
+  per engine (288 total), with no skips or retries. Producer, source, fixture,
+  package and report hashes bind this evidence to the fresh candidate.
 - Sealed evidence, package hashes and checksums are revalidated in the draft
   job along with exact source/profile/readiness. Provenance is unsigned, not
   a cryptographic attestation or reproducible-build claim.

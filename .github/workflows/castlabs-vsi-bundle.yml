@@ -129,7 +129,7 @@ jobs:
           python -m pip install --only-binary=:all: "tmp/bmff-published/c2pa_python-0.37.13+signer.1.0.9-py3-none-manylinux_2_28_x86_64.whl" cbor2==6.1.5 cryptography==50.0.2
           python tools/vsi-fixtures.py tmp/vsi-python-reference tmp/vsi-fixtures tmp/bmff-published/python-wheel-evidence.json
       - name: Generate generic BMFF fixtures and independently check native verdicts
-        run: python tools/bmff-exclusion-fixtures.py tmp/vsi-python-reference tmp/bmff-sdk-reference tmp/bmff-fixtures release/bmff-exclusion-inputs.json
+        run: python tools/bmff-exclusion-fixtures.py tmp/vsi-python-reference tmp/bmff-sdk-reference tmp/bmff-fixtures
       - name: Locked type generation, utilities and web/worker build
         run: |
           mkdir -p packages/c2pa-types/schemas

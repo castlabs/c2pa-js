@@ -325,11 +325,13 @@ CSP that forbids `blob:` workers. Byte-only WASM admission/media are exercised
 separately. Queue/dispose unit mocks and the unchanged fragment-offset suite are
 separate gates, not substitutes for real crypto.
 
-Fixture generation uses the published Python `0.37.13.dev2` Linux wheel, SHA-256
-`5b9a4bd5f56b0fdcd4dc27f42569524677505e0744b51566da7908c836ac0bfb`, Python
-source `466707025658fd2fd5343d74b06f7081db09e64c`, and generator SDK
-`afd6fffe5a066e0b5b1a14f3f8c7ac189e7f0c95`, deliberately distinct from the
-current browser consumer candidate `6021100cc5060b06061ca15b634281cfeb97c718`.
+Candidate 1.0.9 fixture generation uses the published immutable Python
+`0.37.13+signer.1.0.9` Linux wheel, SHA-256
+`62eb9eeb3778a1d2e46e66a5c579a6d2886fe378c71f505f957363f4516d229f`, Python
+source `98ccd6de63d89eca9c23f27658f6b29fe99daffc`, and generator SDK
+`6021100cc5060b06061ca15b634281cfeb97c718`, matching the browser candidate.
+Historical 1.0.8 fixtures used the dev2 producer on SDK `afd6fffe...`; those
+published records are unchanged. Current per-run hashes record new bytes.
 It uses test-only root trust and deterministic session keys (Ed25519 seed byte
 7, ES256 scalar 7). Init/key bindings and media use real signatures, with no
 disabled-trust admission helper. Fixtures and their per-run hashes/provenance are

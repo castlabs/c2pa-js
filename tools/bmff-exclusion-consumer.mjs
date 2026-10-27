@@ -170,9 +170,9 @@ async function qualify(root, downloads, fixtures, consumer, reports) {
   const playwrightEntry = pathToFileURL(resolve(dirname(playwrightManifest), playwrightImport)).href;
   writeFileSync(join(consumer, 'index.html'), '<!doctype html><html><head><title>Installed BMFF exclusion consumer</title></head><body><script type="module" src="/harness.js"></script></body></html>');
   writeFileSync(join(consumer, 'harness.js'), `
-import { createC2pa, Reader, Context } from '@stardustproof/c2pa-web';
-import wasmSrc from '@stardustproof/c2pa-wasm/c2pa.wasm?url';
-import workerSrc from '@stardustproof/c2pa-web/c2pa_worker?url';
+import { createC2pa, Reader, Context } from ${JSON.stringify('@stardustproof/c2pa-web')};
+import wasmSrc from ${JSON.stringify('@stardustproof/c2pa-wasm/c2pa.wasm?url')};
+import workerSrc from ${JSON.stringify('@stardustproof/c2pa-web/c2pa_worker?url')};
 const files = ${JSON.stringify(manifest.files)};
 const sha256 = async bytes => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), b => b.toString(16).padStart(2, '0')).join('');
 window.verifyCase = async entry => {

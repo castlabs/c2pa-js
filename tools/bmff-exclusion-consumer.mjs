@@ -5,9 +5,9 @@ import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { installConsumer } from './vsi-consumer.mjs';
-import { browsers, checkPlaywright, directories, filename, hash, json, save } from './vsi-release.mjs';
+import { browsers, checkPlaywright, directories, filename, hash, json, save, verifySource } from './vsi-release.mjs';
 
-async function qualify(root, downloads, fixtures, consumer, reports) {
+async function qualify(root, downloads, fixtures, consumer, reports, candidate = false) {
   const lockFile = join(root, 'release/bmff-exclusion-inputs.json');
   const lockBytes = readFileSync(lockFile);
   const lock = JSON.parse(lockBytes);
@@ -27,28 +27,44 @@ async function qualify(root, downloads, fixtures, consumer, reports) {
 
   assert.equal(lock.schemaVersion, 1);
   assert.equal(lock.sdkSha, '6021100cc5060b06061ca15b634281cfeb97c718');
-  assert.match(lock.browser.sourceSha, /^[a-f0-9]{40}$/);
-  digest(lock.browser.provenanceSha256);
-  digest(lock.browser.wasmSha256);
-  assert.equal(hash(provenanceBytes), lock.browser.provenanceSha256);
   assert.equal(bundle.schemaVersion, 1);
-  assert.equal(bundle.bundleVersion, '1.0.8');
-  // Published provenance uses identity/inputs, not top-level source/native IDs.
-  assert.equal(bundle.identity.sourceSha, lock.browser.sourceSha);
   assert.equal(bundle.identity.sdkSha, lock.sdkSha);
   assert.equal(bundle.inputs.sdkSha, lock.sdkSha);
   assert.equal(bundle.inputs.qualifiedSdkSha, lock.sdkSha);
   assert.equal(bundle.inputs.sdkIntegration.nativeQualification.headSha, lock.sdkSha);
-  assert.equal(bundle.qualification.passed, true);
-  assert.equal(bundle.wasm.sha256, lock.browser.wasmSha256);
-  assert.equal(bundle.wasm.sri, `sha256-${Buffer.from(lock.browser.wasmSha256, 'hex').toString('base64')}`);
-  assert.deepEqual(lock.browser.packages.map(pkg => pkg.name), directories.map(name => `@stardustproof/${name}`));
-  const packages = lock.browser.packages.map(({ name, version, file, sha256, url }) => {
+  if (candidate) {
+    assert.ok(!existsSync(consumer), 'Candidate consumer root must be separate and absent');
+    assert.equal(bundle.bundleVersion, '1.0.9');
+    assert.equal(bundle.qualification.passed, false, 'Candidate provenance must be unsealed');
+    assert.deepEqual(bundle.identity, verifySource(root, bundle.identity.sourceSha, bundle.bundleVersion));
+    assert.deepEqual(bundle.inputs, json(join(root, 'release/castlabs-vsi-inputs.json')));
+    assert.equal(bundle.inputs.bundleVersion, bundle.bundleVersion);
+    digest(bundle.wasm.sha256);
+    assert.equal(hash(readFileSync(join(root, 'packages/c2pa-wasm/pkg/c2pa_bg.wasm'))), bundle.wasm.sha256);
+    assert.equal(hash(readFileSync(join(root, 'packages/c2pa-web/dist/resources/c2pa_bg.wasm'))), bundle.wasm.sha256);
+    digest(lock.python.evidence.sha256);
+    digest(lock.python.wheel.sha256);
+  } else {
+    assert.match(lock.browser.sourceSha, /^[a-f0-9]{40}$/);
+    digest(lock.browser.provenanceSha256);
+    digest(lock.browser.wasmSha256);
+    assert.equal(hash(provenanceBytes), lock.browser.provenanceSha256);
+    assert.equal(bundle.bundleVersion, '1.0.8');
+    // Published provenance uses identity/inputs, not top-level source/native IDs.
+    assert.equal(bundle.identity.sourceSha, lock.browser.sourceSha);
+    assert.equal(bundle.qualification.passed, true);
+    assert.equal(bundle.wasm.sha256, lock.browser.wasmSha256);
+  }
+  assert.equal(bundle.wasm.sri, `sha256-${Buffer.from(bundle.wasm.sha256, 'hex').toString('base64')}`);
+  const packageInputs = candidate ? bundle.packages : lock.browser.packages;
+  assert.deepEqual(packageInputs.map(pkg => pkg.name), directories.map(name => `@stardustproof/${name}`));
+  const packages = packageInputs.map(({ name, version, file, sha256, url }) => {
     safeFile(file);
     digest(sha256);
     assert.match(version, /^\d+\.\d+\.\d+$/);
     assert.equal(file, filename(name.split('/')[1], version));
-    assert.equal(url, `https://github.com/castlabs/c2pa-js/releases/download/v1.0.8/${file}`);
+    if (candidate) assert.equal(version, bundle.inputs.packages[name.split('/')[1]]);
+    else assert.equal(url, `https://github.com/castlabs/c2pa-js/releases/download/v1.0.8/${file}`);
     assert.equal(hash(readFileSync(join(downloads, file))), sha256, `Tarball hash: ${file}`);
     return { name, version, file, sha256 };
   });
@@ -67,6 +83,7 @@ async function qualify(root, downloads, fixtures, consumer, reports) {
   assert.equal(manifest.producer.sdkVersion, lock.python.sdkVersion);
   assert.ok(manifest.files && !Array.isArray(manifest.files));
   assert.ok(Array.isArray(manifest.cases) && manifest.cases.length > 0);
+  if (candidate) assert.equal(manifest.cases.length, 96, 'Candidate requires exactly 96 fixture cases');
   const names = new Set();
   for (const entry of manifest.cases) {
     assert.equal(typeof entry.name, 'string');
@@ -98,6 +115,7 @@ async function qualify(root, downloads, fixtures, consumer, reports) {
     assert.equal(hash(bytes), metadata.sha256, `Fixture hash: ${file}`);
   }
   const nativeVerdictsFile = safeFile(manifest.provenance.nativeVerdicts);
+  if (candidate) assert.equal(nativeVerdictsFile, 'native-verdicts.json');
   assert.ok(Object.hasOwn(manifest.files, nativeVerdictsFile), 'Native verdicts must be hash-listed');
   const nativeVerdicts = json(join(fixtures, nativeVerdictsFile));
   assert.equal(nativeVerdicts.schemaVersion, 1);
@@ -107,6 +125,7 @@ async function qualify(root, downloads, fixtures, consumer, reports) {
   assert.deepEqual(nativeVerdicts.producer, manifest.producer);
   assert.deepEqual(nativeVerdicts.errors, []);
   assert.ok(Array.isArray(nativeVerdicts.cases));
+  if (candidate) assert.equal(nativeVerdicts.cases.length, 96, 'Candidate requires exactly 96 native cases');
   assert.deepEqual(nativeVerdicts.cases.map(entry => entry.name).sort(), [...names].sort(), 'Native/browser case names differ');
   for (const verdict of nativeVerdicts.cases) {
     const entry = manifest.cases.find(entry => entry.name === verdict.name);
@@ -146,13 +165,14 @@ async function qualify(root, downloads, fixtures, consumer, reports) {
   assert.equal(manifest.producer.generatorSha256, sourceHashes['tools/bmff-exclusion-fixtures.py']);
   cpSync(fixtures, join(reports, 'fixtures'), { recursive: true });
   writeFileSync(join(reports, 'inputs.json'), lockBytes);
+  // In candidate mode this compatibility filename holds the unsealed, pre-seal snapshot.
   writeFileSync(join(reports, 'published-provenance.json'), provenanceBytes);
   const { roots, graph } = installConsumer({ packages }, downloads, consumer);
   save(join(reports, 'consumer-graph.json'), graph);
   cpSync(join(consumer, 'pnpm-lock.yaml'), join(reports, 'consumer-pnpm-lock.yaml'));
   const installedRequire = createRequire(join(consumer, 'package.json'));
   const wasmHash = hash(readFileSync(installedRequire.resolve('@stardustproof/c2pa-wasm/c2pa.wasm')));
-  assert.equal(wasmHash, lock.browser.wasmSha256);
+  assert.equal(wasmHash, bundle.wasm.sha256);
   assert.equal(hash(readFileSync(installedRequire.resolve('@stardustproof/c2pa-web/resources/c2pa.wasm'))), wasmHash);
 
   mkdirSync(join(consumer, 'public/fixtures'), { recursive: true });
@@ -299,6 +319,7 @@ export default defineConfig({ testDir: '.', testMatch: '**/qualification.pw.mjs'
   for (const field of ['unexpected', 'flaky', 'skipped']) assert.equal(browserReport.stats[field], 0);
   assert.deepEqual(readFileSync(lockFile), lockBytes);
   assert.deepEqual(readFileSync(join(downloads, 'provenance.json')), provenanceBytes);
+  if (candidate) assert.deepEqual(verifySource(root, bundle.identity.sourceSha, bundle.bundleVersion), bundle.identity);
   for (const pkg of packages) assert.equal(hash(readFileSync(join(downloads, pkg.file))), pkg.sha256);
   for (const [file, sha] of Object.entries(sourceHashes)) assert.equal(hash(readFileSync(join(root, file))), sha);
   for (const [file, sha] of Object.entries(harnessHashes)) assert.equal(hash(readFileSync(join(consumer, file))), sha);
@@ -309,9 +330,10 @@ export default defineConfig({ testDir: '.', testMatch: '**/qualification.pw.mjs'
   const reportHashes = Object.fromEntries(['browser.json', 'consumer-graph.json', 'consumer-pnpm-lock.yaml', 'inputs.json', 'published-provenance.json']
     .map(file => [file, hash(readFileSync(join(reports, file)))]));
   save(join(reports, 'qualification.json'), {
-    schemaVersion: 1, passed: true, profile: 'bmff-exclusion-installed-consumer-v1',
-    sdkSha: lock.sdkSha, browserSourceSha: lock.browser.sourceSha, wasmSha256: wasmHash,
-    packages: lock.browser.packages, producer: manifest.producer,
+    schemaVersion: 1, passed: true, profile: candidate ? 'bmff-exclusion-candidate-consumer-v1' : 'bmff-exclusion-installed-consumer-v1',
+    ...(candidate ? { bundleVersion: bundle.bundleVersion, producerInputs: lock.python } : {}),
+    sdkSha: lock.sdkSha, browserSourceSha: bundle.identity.sourceSha, wasmSha256: wasmHash,
+    packages: packageInputs, producer: manifest.producer,
     cases: manifest.cases, browsers, expectedTests: manifest.cases.length * browsers.length,
     actualTests: browserReport.stats.expected, workers: 1, retries: 0,
     packageRoots: roots, fixtureHashes, sourceHashes, harnessHashes, reportHashes,
@@ -319,12 +341,17 @@ export default defineConfig({ testDir: '.', testMatch: '**/qualification.pw.mjs'
     limitations: [
       'Binding qualification only: signer credential trust is disabled; Valid is not publisher trust.',
       'Fixture expectations and mutation/native metadata are unsigned; hashes bind the recorded inputs, not their authority.',
-      'Published provenance is byte-pinned, not an attestation or reproducible-build guarantee.'
+      candidate
+        ? 'Candidate provenance is an unsealed pre-seal snapshot, not an attestation or reproducible-build guarantee; the historical lock supplies producer pins only.'
+        : 'Published provenance is byte-pinned, not an attestation or reproducible-build guarantee.'
     ]
   });
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  assert.equal(process.argv.length, 7, 'Usage: node tools/bmff-exclusion-consumer.mjs <repo-root> <download-dir> <fixtures-dir> <consumer-dir> <reports-dir>');
-  await qualify(...process.argv.slice(2).map(path => resolve(path)));
+  const args = process.argv.slice(2);
+  const candidate = args.at(-1) === '--candidate';
+  if (candidate) args.pop();
+  assert.ok(args.length === 5 && args.every(path => !path.startsWith('--')), 'Usage: node tools/bmff-exclusion-consumer.mjs <repo-root> <download-dir> <fixtures-dir> <consumer-dir> <reports-dir> [--candidate]');
+  await qualify(...args.map(path => resolve(path)), candidate);
 }

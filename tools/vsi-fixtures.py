@@ -1,6 +1,6 @@
-"""CI-only signed fixtures, using the published dev2 wheel, never a native build.
+"""CI-only signed fixtures, using the published signer.1.0.9 wheel, never a native build.
 
-Recipe adapted from c2pa-python 466707025658fd2fd5343d74b06f7081db09e64c
+Recipe adapted from c2pa-python 98ccd6de63d89eca9c23f27658f6b29fe99daffc
 tests/test_trusted_vsi_api.py. These are test credentials, not production trust.
 """
 import hashlib
@@ -29,15 +29,20 @@ settings = json.loads((source / "tests/trust_config_test_settings.json").read_te
 settings["builder"] = {"thumbnail": {"enabled": False}}
 settings["verify"] = {"verify_after_reading": True, "verify_trust": True, "verify_timestamp_trust": True}
 # Fixture identity stays tied to this published generator, not to a future browser SDK pin.
-python_source = "466707025658fd2fd5343d74b06f7081db09e64c"
+python_source = "98ccd6de63d89eca9c23f27658f6b29fe99daffc"
 lock_bytes = (source / "release/castlabs-vsi-inputs.lock.json").read_bytes()
 lock_sha = hashlib.sha256(lock_bytes).hexdigest()
-assert lock_sha == "c45697751d8446c2453d455148964b32c0d4d6bf55e8a1c800a3d6b5f1f6ea9c"
+assert lock_sha == "ebc3ba31b9ef056b51e3c52e5c200d65157239a3cda3bd577f6ba81e155d2370"
 inputs = json.loads(lock_bytes)
+assert inputs["schemaVersion"] == 1
+assert inputs["package"]["version"] == "0.37.13+signer.1.0.9"
+assert inputs["rustSource"]["commit"] == "6021100cc5060b06061ca15b634281cfeb97c718"
 evidence_bytes = Path(sys.argv[3]).read_bytes()
 evidence_sha = hashlib.sha256(evidence_bytes).hexdigest()
-assert evidence_sha == "35561c88627225770ada29730a5e5008a461939a1497f8870c03ca7041b56590"
+assert evidence_sha == "d18a91bda040c6897e6ca8f8e3f55ebcfbd7957de59cdf935e069b5b8bc819c5"
 evidence = json.loads(evidence_bytes)
+assert evidence["schemaVersion"] == 2
+assert evidence["artifact"]["version"] == inputs["package"]["version"]
 assert evidence["sources"]["c2paPython"]["commit"] == python_source
 assert evidence["sources"]["c2paRs"] == {
     "repository": inputs["rustSource"]["repository"], "url": inputs["rustSource"]["url"],
@@ -45,7 +50,8 @@ assert evidence["sources"]["c2paRs"] == {
     "cargoLockSha256": inputs["rustSource"]["cargoLockSha256"],
 }
 wheel = next(member for member in evidence["artifact"]["members"] if member["target"] == "x86_64-unknown-linux-gnu")
-assert wheel["sha256"] == "5b9a4bd5f56b0fdcd4dc27f42569524677505e0744b51566da7908c836ac0bfb"
+assert wheel["sha256"] == "62eb9eeb3778a1d2e46e66a5c579a6d2886fe378c71f505f957363f4516d229f"
+assert wheel["nativeSha256"] == "d356a7afe705381d3a4f7d2f7fbdb70aab2325ad7617cefd29d035a301ff7c99"
 native_library = Path(c2pa.__file__).parent / Path(wheel["nativeMember"]).relative_to("c2pa")
 assert Path(bindings._lib._name).resolve() == native_library.resolve()
 assert hashlib.sha256(native_library.read_bytes()).hexdigest() == wheel["nativeSha256"]

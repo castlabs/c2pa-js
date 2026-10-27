@@ -162,7 +162,12 @@ import type { ManifestStore } from ${JSON.stringify(types)};
 import init, { WASM_SRI, WasmLiveVideoValidator } from ${JSON.stringify(wasm)};
 const exports = [createC2pa, inline, LiveVideoValidator, Context, UtilityContext, init, WASM_SRI, WasmLiveVideoValidator];
 const store: ManifestStore | undefined = undefined;
-void exports; void store;
+const context = new UtilityContext({ builder: { generateC2paArchive: true, bmffHashExtraExclusions: [
+  { xpath: '/sidx', length: 32, data: [{ offset: 8, value: [0] }], subset: [{ offset: 12, length: 0 }], version: 0, flags: [0, 0, 1], exact: false }
+] } });
+// @ts-expect-error the installed facade must reject malformed descriptors
+new UtilityContext({ builder: { generateC2paArchive: true, bmffHashExtraExclusions: [{ xpath: 7 }] } });
+void exports; void store; void context;
 `);
   const workspaceRequire = createRequire(join(root, 'package.json'));
   const webRequire = createRequire(join(root, 'packages/c2pa-web/package.json'));

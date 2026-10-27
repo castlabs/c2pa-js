@@ -542,6 +542,14 @@ class Fixtures:
                     contiguous = self.write(name + "/uuid-contiguous.m4s", signed[start:], layout=True)
                     self.fragment(name + "-uuid-contiguous-delivery", init, contiguous, start, False)
             index = 1
+            # Keep the already-validated init identical across head/regroup
+            # controls, so missing init coverage cannot explain a rejection.
+            known_init = name + "/uuid-init.mp4"
+            self.fragment(name + "-leading-head-valid-init", known_init,
+                          name + "/sidx-1.m4s", sidx[index]["offset"], bool(exclusions))
+            if not exclusions:
+                self.fragment(name + "-included-head-regrouped", known_init,
+                              name + "/uuid-1.m4s", uuids[index]["offset"])
             for suffix, offset, valid in [
                 ("sidx-payload", sidx[index]["payloadOffset"] + 12, bool(exclusions)),
                 ("media-payload", mdats[index]["payloadOffset"] + 10, False),
@@ -588,6 +596,7 @@ class Fixtures:
                 "redelivery": "Every case gets a fresh Reader; expectations do not endorse stale coverage caching",
                 "statusComparison": "Required success subset; exact failure sets (none for Valid, only BMFF mismatch for ordinary Invalid); descriptor tamper requires hashedURI mismatch and permits only an additional BMFF mismatch",
                 "initCoverage": "For /sidx exclusion, mutate the first sidx in UUID-init and the covered mvhd duration separately; reuse all three original UUID-cut leaves with correct absolute offsets",
+                "headControl": "Middle sidx-cut and UUID-regrouped candidates reuse the same known-valid UUID-init; covered-head rejection is not inferred from a missing covered init box",
                 "repeatability": "Fixed inputs, recipes, case names and mutations; native salts/signatures/labels may vary",
                 "generationComplete": complete,
                 "qualified": complete and not self.errors,

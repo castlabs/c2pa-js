@@ -65,6 +65,9 @@ That expected limitation is checked in CI; it must not be advertised as a passin
 multi-leaf player fast path. A leading excluded `sidx` followed by exactly one
 complete leaf is the positive candidate. The default, included-`sidx` cut is the
 negative control and succeeds only after correct UUID-boundary regrouping.
+The `leading-head-valid-init` cases deliberately reuse the same already-validated
+UUID init, isolating the candidate's leading box from missing-init coverage.
+`merkle-default-included-head-regrouped` uses that identical init and succeeds.
 
 ## Running And Evidence
 

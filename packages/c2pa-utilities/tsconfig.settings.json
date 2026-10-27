@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "declarationMap": false,
+    "emitDeclarationOnly": false,
+    "noEmit": true,
+    "lib": ["ES2023", "DOM"],
+    "types": ["vitest/globals"]
+  },
+  "include": ["src/settings.spec.ts", "src/caseConversion.spec.ts"]
+}

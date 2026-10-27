@@ -145,6 +145,32 @@ export interface BuilderSettings {
    */
   generateC2paArchive: true;
   /**
+   * Extra exclusions appended to the native SDK's required/default BMFF hash exclusions.
+   * Excluded bytes are unauthenticated; only exclude content that is safe to leave unsigned.
+   * Omit this setting (the native default is empty) to keep existing hashing behavior.
+   * `mergeSettings` combines exclusion arrays; a later empty array does not clear earlier
+   * exclusions. To replace a list, assign it on the final settings object after merging.
+   *
+   * Requires native SDK support for `builder.bmff_hash_extra_exclusions`.
+   * Native validation is authoritative; this facade only types and serializes descriptors.
+   */
+  bmffHashExtraExclusions?: {
+    /** Literal absolute box path, for example `/moov/udta`. */
+    xpath: string;
+    /** Box length condition. Use a nonnegative JavaScript safe integer. */
+    length?: number;
+    /** Byte-match conditions. Offsets must be nonnegative safe integers; values are bytes (0-255). */
+    data?: { offset: number; value: number[] }[];
+    /** Excluded ranges. Use nonnegative safe integers; a final length of 0 means to box end. */
+    subset?: { offset: number; length: number }[];
+    /** FullBox version condition, an integer from 0 to 255. */
+    version?: number;
+    /** FullBox flags condition, exactly three integer bytes (0-255). */
+    flags?: number[];
+    /** Exact flags matching when true; requires flags even when false. */
+    exact?: boolean;
+  }[];
+  /**
    * Settings for automatic thumbnail generation.
    */
   thumbnail?: {
@@ -326,8 +352,8 @@ export function createVerifySettings(verifyConfig: VerifySettings): Settings {
 
 /**
  * Merge multiple Settings objects into one, deep-merging nested fields (e.g.
- * `builder.thumbnail`) rather than overwriting whole sections. Later settings override
- * earlier ones.
+ * `builder.thumbnail`) rather than overwriting whole sections. Later scalar settings override
+ * earlier ones; arrays are combined, so an empty array does not clear an earlier array.
  *
  * @param settings Settings objects to merge.
  * @returns Merged settings object.

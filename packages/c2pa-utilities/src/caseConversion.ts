@@ -9,14 +9,13 @@
 
 /**
  * Any value that can appear inside a resolved Settings object when `snakeCaseifyValue` walks
- * it: the primitives Settings fields actually use (string, boolean), undefined (optional
+ * it: the primitives Settings fields actually use (string, number, boolean), undefined (optional
  * fields), a nested object, or an array of any of these — recursive so arbitrarily nested
- * structures (including arrays of objects) get walked without losing array-ness. Deliberately
- * narrower than "any JSON value" (no numbers, for instance) since no current Settings field
- * needs one. We can widen this if that changes.
+ * structures (including arrays of objects) get walked without losing array-ness.
  */
 export type SettingsValue =
   | string
+  | number
   | boolean
   | undefined
   | SettingsObjectType

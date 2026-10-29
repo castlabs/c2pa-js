@@ -1,9 +1,11 @@
 # Castlabs JavaScript Source Line
 
-This independent `@stardustproof` source branch prepares the browser SDK for the
-planned signer 1.0.8 VSI line. It is not a published or browser-qualified VSI
-implementation. See [Castlabs VSI source preparation](docs/castlabs-vsi/README.md)
-for exact inputs, the stateful validator API plan and player migration gates.
+This independent `@stardustproof` source branch prepares browser bundle 1.0.9,
+stacked on the published 1.0.8 VSI line and using the published signer 1.0.9
+Python fixture producer on the same SDK602 native pin. This candidate is not
+published. See [release preparation](release/README.md) for exact inputs,
+CI qualification and publication gates, and the [VSI API](docs/castlabs-vsi/README.md)
+for validator behavior and player migration boundaries.
 The native Node package remains private and is not part of this product release.
 See the [VSI browser security assessment](docs/castlabs-vsi/security.md) for the
 selected dependency hardening, regression coverage and qualification limits.

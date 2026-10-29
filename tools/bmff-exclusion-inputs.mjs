@@ -5,7 +5,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { hash } from './vsi-release.mjs';
 
-async function download(lockPath, output) {
+async function download(lockPath, output, producerOnly = false) {
   const lockBytes = readFileSync(lockPath);
   const lock = JSON.parse(lockBytes);
   assert.equal(lock.schemaVersion, 1);
@@ -21,11 +21,13 @@ async function download(lockPath, output) {
     writeFileSync(join(output, name), bytes, { flag: 'wx' });
     return bytes;
   }
-  const provenance = JSON.parse(await asset(lock.browser.provenanceUrl, lock.browser.provenanceSha256, 'provenance.json'));
-  assert.equal(provenance.identity.sourceSha, lock.browser.sourceSha);
-  assert.equal(provenance.identity.sdkSha, lock.sdkSha);
-  assert.equal(provenance.wasm.sha256, lock.browser.wasmSha256);
-  for (const pkg of lock.browser.packages) await asset(pkg.url, pkg.sha256, pkg.file);
+  if (!producerOnly) {
+    const provenance = JSON.parse(await asset(lock.browser.provenanceUrl, lock.browser.provenanceSha256, 'provenance.json'));
+    assert.equal(provenance.identity.sourceSha, lock.browser.sourceSha);
+    assert.equal(provenance.identity.sdkSha, lock.sdkSha);
+    assert.equal(provenance.wasm.sha256, lock.browser.wasmSha256);
+    for (const pkg of lock.browser.packages) await asset(pkg.url, pkg.sha256, pkg.file);
+  }
   const evidence = JSON.parse(await asset(lock.python.evidence.url, lock.python.evidence.sha256, 'python-wheel-evidence.json'));
   assert.equal(evidence.sources.c2paPython.commit, lock.python.sourceSha);
   assert.equal(evidence.sources.c2paRs.commit, lock.sdkSha);
@@ -41,6 +43,9 @@ async function download(lockPath, output) {
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  assert.equal(process.argv.length, 4, 'Usage: node tools/bmff-exclusion-inputs.mjs <lock-file> <output-dir>');
-  await download(...process.argv.slice(2).map(path => resolve(path)));
+  const args = process.argv.slice(2);
+  const producerOnly = args.at(-1) === '--producer-only';
+  if (producerOnly) args.pop();
+  assert.ok(args.length === 2 && args.every(path => !path.startsWith('--')), 'Usage: node tools/bmff-exclusion-inputs.mjs <lock-file> <output-dir> [--producer-only]');
+  await download(...args.map(path => resolve(path)), producerOnly);
 }

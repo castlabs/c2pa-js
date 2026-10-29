@@ -24,27 +24,30 @@ export function run(command, args, cwd, inherit = false) {
 
 export function validateInputs(inputs, publish = false) {
   assert.equal(inputs.schemaVersion, 1);
-  assert.equal(inputs.bundleVersion, '1.0.8');
+  assert.equal(inputs.bundleVersion, '1.0.9');
   assert.match(inputs.sdkSha, /^[a-f0-9]{40}$/);
   assert.equal(typeof inputs.releaseReady, 'boolean');
   assert.deepEqual(Object.keys(inputs.packages), directories);
-  for (const version of Object.values(inputs.packages)) assert.match(version, /^\d+\.\d+\.\d+$/);
+  assert.deepEqual(inputs.packages, { 'c2pa-types': '0.7.5', 'c2pa-wasm': '0.13.2', 'c2pa-utilities': '0.3.2', 'c2pa-web': '0.15.4' });
   assert.deepEqual(inputs.tools, { wasmBindgen: '0.2.129', binaryen: '124' });
   assert.equal(inputs.sdkIntegration.repository, 'castlabs/c2pa-rs');
   assert.equal(inputs.sdkIntegration.targetRef, 'feat/trusted-vsi-functional');
   assert.deepEqual(inputs.sdkIntegration.requiredPRs, [27, 28, 29]);
   assert.deepEqual(Object.keys(inputs.sdkIntegration.mergeCommits).sort(), ['27', '28', '29']);
-  // This remains the old SDK's independently published interoperability fixture.
+  // Producer identity is the published immutable wheel, never a local native build.
   assert.deepEqual(inputs.interopFixture, {
-    pythonSha: '466707025658fd2fd5343d74b06f7081db09e64c',
-    sdkSha: 'afd6fffe5a066e0b5b1a14f3f8c7ac189e7f0c95',
-    wheelVersion: '0.37.13.dev2',
-    wheelSha256: '5b9a4bd5f56b0fdcd4dc27f42569524677505e0744b51566da7908c836ac0bfb'
+    pythonSha: '98ccd6de63d89eca9c23f27658f6b29fe99daffc',
+    sdkSha: '6021100cc5060b06061ca15b634281cfeb97c718',
+    wheelVersion: '0.37.13+signer.1.0.9',
+    wheelSha256: '62eb9eeb3778a1d2e46e66a5c579a6d2886fe378c71f505f957363f4516d229f',
+    lockSha256: 'ebc3ba31b9ef056b51e3c52e5c200d65157239a3cda3bd577f6ba81e155d2370',
+    evidenceSha256: 'd18a91bda040c6897e6ca8f8e3f55ebcfbd7957de59cdf935e069b5b8bc819c5',
+    nativeSha256: 'd356a7afe705381d3a4f7d2f7fbdb70aab2325ad7617cefd29d035a301ff7c99'
   });
   if (inputs.releaseReady || publish) {
     assert.equal(inputs.releaseReady, true, 'Publication blocked: release inputs are pre-integration');
     assert.equal(inputs.sdkStatus, 'qualified-functional');
-    assert.notEqual(inputs.sdkSha, inputs.interopFixture.sdkSha, 'The old API SDK cannot be the release pin');
+    assert.equal(inputs.sdkSha, '6021100cc5060b06061ca15b634281cfeb97c718', 'Candidate SDK pin must remain SDK602; advanced native work needs separate approval');
     assert.equal(inputs.qualifiedSdkSha, inputs.sdkSha);
     for (const sha of Object.values(inputs.sdkIntegration.mergeCommits)) assert.match(sha, /^[a-f0-9]{40}$/);
     const native = inputs.sdkIntegration.nativeQualification;
@@ -118,7 +121,7 @@ export function stageManifest(original, inputs) {
       if (name.startsWith('@stardustproof/')) {
         const dependency = name.slice('@stardustproof/'.length);
         assert.ok(directories.includes(dependency), `Excluded dependency ${name}`);
-        manifest[field][name] = `https://github.com/castlabs/c2pa-js/releases/download/v1.0.8/${filename(dependency, inputs.packages[dependency])}`;
+        manifest[field][name] = `https://github.com/castlabs/c2pa-js/releases/download/v${inputs.bundleVersion}/${filename(dependency, inputs.packages[dependency])}`;
       } else assert.ok(!/^(workspace:|file:|link:)/.test(version), `Local dependency ${name}`);
     }
   }
@@ -127,7 +130,7 @@ export function stageManifest(original, inputs) {
 
 export function verifySource(root, sourceSha, version) {
   assert.match(sourceSha, /^[0-9a-f]{40}$/, 'source_sha must be a full lowercase SHA');
-  assert.equal(version, '1.0.8');
+  assert.equal(version, '1.0.9');
   assert.equal(run('git', ['rev-parse', 'HEAD'], root), sourceSha);
   assert.equal(run('git', ['status', '--porcelain', '--untracked-files=no'], root), '', 'Tracked source changed');
   const inputs = validateInputs(json(join(root, 'release/castlabs-vsi-inputs.json')));
@@ -185,13 +188,16 @@ export function pack(root, output, sourceSha, version) {
   assert.equal(fixture.sdk, inputs.interopFixture.sdkSha);
   assert.equal(fixture.python, inputs.interopFixture.pythonSha);
   assert.equal(fixture.wheelSha256, inputs.interopFixture.wheelSha256);
+  assert.equal(fixture.releaseInputLockSha256, inputs.interopFixture.lockSha256);
+  assert.equal(fixture.wheelEvidenceSha256, inputs.interopFixture.evidenceSha256);
+  assert.equal(fixture.nativeSha256, inputs.interopFixture.nativeSha256);
   save(join(output, 'provenance.json'), {
     schemaVersion: 1, bundleVersion: version, identity, inputs, packages,
     wasm: { sha256: hash(wasm), sri }, interopFixture: fixture,
     tools: json(join(output, 'tool-versions.json')),
     workflow: { sha: process.env.GITHUB_WORKFLOW_SHA ?? null, runId: process.env.GITHUB_RUN_ID ?? null, attempt: process.env.GITHUB_RUN_ATTEMPT ?? null },
     qualification: { passed: false },
-    limitations: ['Unsigned provenance, not an attestation or reproducible-build guarantee.', 'The dev2 Python wheel uses the old SDK; these are interoperability fixtures, not qualification of the new SDK release.', 'GitHub draft assets only; no npm publication. Absolute dependency URLs become usable only after reviewed publication.', 'Pre-integration builds are diagnostic and cannot be released.']
+    limitations: ['Unsigned provenance, not an attestation or reproducible-build guarantee.', 'Fixtures use the published Python 0.37.13+signer.1.0.9 wheel on SDK602; generation does not create a new native release.', 'GitHub draft assets only; no npm publication. Absolute dependency URLs become usable only after reviewed publication.', 'Advanced native descriptor/range resolution and sparse APIs are outside this release and require separate approval.']
   });
 }
 
@@ -244,8 +250,9 @@ export function checkPlaywright(report, expectedPerBrowser, expectedNames) {
 }
 
 export function verifyEvidence(root, output) {
-  const files = ['queue.json', ...browsers.map(b => `source-${b}.json`), 'source-vsi.json', 'installed-vsi.json', 'installed-offsets.json', 'consumer.json', 'consumer-graph.json', 'consumer-pnpm-lock.yaml'];
+  const files = ['queue.json', 'utilities.json', ...browsers.map(b => `source-${b}.json`), 'source-vsi.json', 'installed-vsi.json', 'installed-offsets.json', 'consumer.json', 'consumer-graph.json', 'consumer-pnpm-lock.yaml'];
   checkVitest(json(join(output, 'queue.json')), 3);
+  checkVitest(json(join(output, 'utilities.json')), 105);
   const sourceTests = run('git', ['ls-files', 'packages/c2pa-web/src', 'packages/c2pa-web/test'], root).split('\n').filter(file => /\.(test|spec)\.(js|mjs|cjs|ts|mts|cts|jsx|tsx)$/.test(file));
   assert.ok(sourceTests.length > 0);
   for (const browser of browsers) {
@@ -265,6 +272,71 @@ export function verifyEvidence(root, output) {
   assert.equal(consumer.assertionHash, hash(readFileSync(join(root, 'packages/c2pa-web/test/vsi/qualification.pw.ts'))));
   const bundle = json(join(output, 'provenance.json'));
   assert.deepEqual(consumer.packages, bundle.packages);
+  const generic = json(join(output, 'bmff/qualification.json'));
+  assert.equal(generic.schemaVersion, 1);
+  assert.equal(generic.passed, true);
+  assert.equal(generic.profile, 'bmff-exclusion-candidate-consumer-v1');
+  assert.equal(generic.bundleVersion, bundle.bundleVersion);
+  assert.equal(generic.browserSourceSha, bundle.identity.sourceSha);
+  assert.equal(generic.sdkSha, bundle.identity.sdkSha);
+  assert.equal(generic.wasmSha256, bundle.wasm.sha256);
+  assert.deepEqual(generic.packages, bundle.packages);
+  assert.deepEqual(generic.browsers, browsers);
+  assert.equal(generic.workers, 1);
+  assert.equal(generic.retries, 0);
+  assert.equal(generic.expectedTests, 288);
+  assert.equal(generic.actualTests, 288);
+  const lock = json(join(root, 'release/bmff-exclusion-inputs.json'));
+  assert.deepEqual(generic.producerInputs, lock.python);
+  assert.equal(generic.lockSha256, hash(readFileSync(join(root, 'release/bmff-exclusion-inputs.json'))));
+  const snapshot = json(join(output, 'bmff/published-provenance.json'));
+  assert.deepEqual(snapshot, { ...bundle, qualification: { passed: false } }, 'Generic evidence must qualify this exact unsealed bundle');
+  assert.equal(generic.provenanceSha256, hash(readFileSync(join(output, 'bmff/published-provenance.json'))));
+  const manifest = json(join(output, 'bmff/fixtures/manifest.json'));
+  assert.equal(generic.manifestSha256, hash(readFileSync(join(output, 'bmff/fixtures/manifest.json'))));
+  assert.deepEqual(generic.producer, manifest.producer);
+  assert.equal(manifest.producer.pythonVersion, lock.python.version);
+  assert.equal(manifest.producer.pythonSourceSha, lock.python.sourceSha);
+  assert.equal(manifest.producer.sdkSha, bundle.identity.sdkSha);
+  assert.equal(manifest.producer.nativeLibrarySha256, lock.python.nativeSha256);
+  assert.equal(manifest.producer.generatorSha256, hash(readFileSync(join(root, 'tools/bmff-exclusion-fixtures.py'))));
+  assert.deepEqual(generic.cases, manifest.cases);
+  assert.equal(manifest.cases.length, 96);
+  const names = manifest.cases.map(entry => entry.name);
+  assert.equal(new Set(names).size, 96);
+  const native = json(join(output, 'bmff/fixtures/native-verdicts.json'));
+  assert.equal(native.schemaVersion, 1);
+  assert.equal(native.generationComplete, true);
+  assert.equal(native.qualified, true);
+  assert.equal(native.generationFailure, null);
+  assert.deepEqual(native.errors, []);
+  assert.deepEqual(native.producer, manifest.producer);
+  assert.deepEqual(native.cases.map(entry => entry.name).sort(), [...names].sort());
+  for (const verdict of native.cases) {
+    const entry = manifest.cases.find(entry => entry.name === verdict.name);
+    assert.equal(verdict.qualified, true);
+    assert.equal(verdict.exception, undefined);
+    assert.deepEqual(verdict.differences ?? [], []);
+    assert.equal(verdict.mode, entry.mode);
+    assert.equal(verdict.state, entry.expect.state);
+  }
+  const report = json(join(output, 'bmff/browser.json'));
+  checkPlaywright(report, 96, names);
+  assert.equal(report.stats.expected, 288);
+  for (const field of ['unexpected', 'flaky', 'skipped']) assert.equal(report.stats[field], 0);
+  for (const required of ['browser.json', 'consumer-graph.json', 'consumer-pnpm-lock.yaml', 'inputs.json', 'published-provenance.json']) assert.ok(Object.hasOwn(generic.reportHashes, required));
+  for (const required of ['manifest.json', 'native-verdicts.json', ...Object.keys(manifest.files)]) assert.ok(Object.hasOwn(generic.fixtureHashes, required));
+  for (const required of ['tools/bmff-exclusion-consumer.mjs', 'tools/bmff-exclusion-fixtures.py', 'tools/bmff-exclusion-inputs.mjs', 'tools/vsi-consumer.mjs', 'tools/vsi-release.mjs', 'tools/vsi-installed-offsets.mjs', '.github/workflows/castlabs-vsi-bundle.yml']) assert.ok(Object.hasOwn(generic.sourceHashes, required));
+  for (const [base, hashes, source] of [['bmff', generic.reportHashes, false], ['bmff/fixtures', generic.fixtureHashes, false], ['', generic.sourceHashes, true]]) {
+    for (const [file, digest] of Object.entries(hashes)) {
+      assert.match(file, /^[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*$/);
+      assert.ok(!file.split('/').some(part => part === '.' || part === '..'));
+      assert.equal(hash(readFileSync(join(source ? root : output, base, file))), digest, `Generic evidence hash: ${file}`);
+      if (!source) files.push(`${base}/${file}`);
+    }
+  }
+  assert.equal(hash(readFileSync(join(output, 'bmff/inputs.json'))), generic.lockSha256);
+  files.push('bmff/qualification.json');
   return Object.fromEntries(files.map(file => [file, hash(readFileSync(join(output, file)))]));
 }
 
@@ -288,6 +360,16 @@ export function seal(root, output, sourceSha, version, publish = false) {
   assert.deepEqual(Object.keys(tools.archiveSha256).sort(), ['binaryen', 'bindgen']);
   for (const digest of [tools.cargoWasmSha256, ...Object.values(tools.archiveSha256)]) assert.match(digest, /^[a-f0-9]{64}$/);
   const evidence = verifyEvidence(root, output);
+  const genericFiles = Object.keys(evidence).filter(file => file.startsWith('bmff/')).sort();
+  const archive = join(output, 'bmff-evidence.tar.gz');
+  if (!publish) run('tar', ['-czf', archive, '-C', output, ...genericFiles], root);
+  assert.deepEqual(run('tar', ['-tzf', archive], root).split('\n').sort(), genericFiles);
+  for (const file of genericFiles) {
+    const member = spawnSync('tar', ['-xOzf', archive, file], { maxBuffer: 64 * 1024 * 1024 });
+    assert.equal(member.status, 0);
+    assert.equal(hash(member.stdout), evidence[file], `Archived evidence differs: ${file}`);
+  }
+  evidence['bmff-evidence.tar.gz'] = hash(readFileSync(archive));
   if (publish) {
     assert.deepEqual(bundle.workflow, { sha: process.env.GITHUB_WORKFLOW_SHA, runId: process.env.GITHUB_RUN_ID, attempt: process.env.GITHUB_RUN_ATTEMPT }, 'Evidence belongs to another workflow run');
     assert.deepEqual(bundle.qualification, { passed: true, profile: 'vsi-browser-bundle-v1', evidence });

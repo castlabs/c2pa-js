@@ -125,9 +125,9 @@ there is no rollback or clobber path.
 
 ## Verification
 
-`castlabs-vsi-promotion-guard.yml` runs only dependency-free automation tests for
-the `ci/publish-vsi-1.0.9` PR targeting main and matching automation paths. It has
-read-only permissions and cannot publish. The existing general CI is unchanged.
+The existing `ci.yml` `publication-guards` job runs dependency-free automation
+tests on PRs with read-only permissions and cannot publish. No duplicate guard
+workflow is needed; the existing general CI is unchanged.
 The dispatch workflow runs those same tests before selecting a source checkout.
 
 CI runs `node --test tools/vsi-promote.test.mjs`: synthetic positive/negative

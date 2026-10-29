@@ -63,22 +63,22 @@ test('only locked enabled releases are selectable; synthetic descriptors never e
   for (const field of ['schemaVersion', 'enabled', 'wasmSha256']) {
     const bad = synthetic109();
     bad[field] = null;
-    assert.throws(() => validateDescriptor(bad, 'v1.0.9'), field);
+    assert.throws(() => validateDescriptor(bad, 'v1.0.9'), undefined, field);
   }
   for (const field of Object.keys(descriptors[1].origin)) {
     const bad = synthetic109();
     bad.origin[field] = null;
-    assert.throws(() => validateDescriptor(bad, 'v1.0.9'), field);
+    assert.throws(() => validateDescriptor(bad, 'v1.0.9'), undefined, field);
   }
   for (const field of ['releaseId', 'runId', 'attempt']) for (const value of [0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
     const bad = synthetic109();
     bad.origin[field] = value;
-    assert.throws(() => validateDescriptor(bad, 'v1.0.9'), field);
+    assert.throws(() => validateDescriptor(bad, 'v1.0.9'), undefined, field);
   }
   for (let i = 0; i < 19; i++) for (const column of [0, 1, 2, 3]) {
     const bad = synthetic109();
     bad.assetPins[i][column] = column === 0 ? 'unexpected.json' : null;
-    assert.throws(() => validateDescriptor(bad, 'v1.0.9'), `${i}:${column}`);
+    assert.throws(() => validateDescriptor(bad, 'v1.0.9'), undefined, `${i}:${column}`);
   }
   for (const change of [
     d => d.assetPins.pop(), d => d.assetPins.push(d.assetPins[0]),
@@ -93,12 +93,12 @@ test('only locked enabled releases are selectable; synthetic descriptors never e
   for (const name of Object.keys(descriptors[1].anchors)) for (const field of ['id', 'sha256']) {
     const bad = synthetic109();
     bad.anchors[name][field] = field === 'id' ? 1 : hash('wrong anchor');
-    assert.throws(() => validateDescriptor(bad, 'v1.0.9'), `${name}:${field}`);
+    assert.throws(() => validateDescriptor(bad, 'v1.0.9'), undefined, `${name}:${field}`);
   }
   for (let i = 0; i < 4; i++) for (const field of ['name', 'version', 'file', 'sha256']) {
     const bad = synthetic109();
     bad.packages[i][field] = field === 'sha256' ? hash('wrong package') : 'wrong';
-    assert.throws(() => validateDescriptor(bad, 'v1.0.9'), `${i}:${field}`);
+    assert.throws(() => validateDescriptor(bad, 'v1.0.9'), undefined, `${i}:${field}`);
   }
   assert.deepEqual(locked, before, 'Synthetic filling and validation must not mutate locked descriptors');
 });
@@ -112,16 +112,16 @@ for (const descriptor of descriptors) {
     for (const field of Object.keys(originalRun(descriptor))) {
       const run = originalRun(descriptor);
       run[field] = typeof run[field] === 'object' ? { full_name: 'attacker/fork' } : 'wrong';
-      assert.throws(() => verifyOrigin(run, originalJobs(descriptor), descriptor), field);
+      assert.throws(() => verifyOrigin(run, originalJobs(descriptor), descriptor), undefined, field);
       delete run[field];
-      assert.throws(() => verifyOrigin(run, originalJobs(descriptor), descriptor), `missing ${field}`);
+      assert.throws(() => verifyOrigin(run, originalJobs(descriptor), descriptor), undefined, `missing ${field}`);
     }
     for (let i = 0; i < 2; i++) for (const field of Object.keys(originalJobs(descriptor)[i])) {
       const jobs = originalJobs(descriptor);
       jobs[i][field] = 'wrong';
-      assert.throws(() => verifyOrigin(originalRun(descriptor), jobs, descriptor), `${i}:${field}`);
+      assert.throws(() => verifyOrigin(originalRun(descriptor), jobs, descriptor), undefined, `${i}:${field}`);
       delete jobs[i][field];
-      assert.throws(() => verifyOrigin(originalRun(descriptor), jobs, descriptor), `missing ${i}:${field}`);
+      assert.throws(() => verifyOrigin(originalRun(descriptor), jobs, descriptor), undefined, `missing ${i}:${field}`);
     }
     assert.throws(() => verifyOrigin(originalRun(descriptor), originalJobs(descriptor).slice(0, 1), descriptor));
     assert.throws(() => verifyOrigin(originalRun(descriptor), [...originalJobs(descriptor), originalJobs(descriptor)[0]], descriptor));
@@ -134,12 +134,12 @@ for (const descriptor of descriptors) {
     assert.equal(before.assets.length, origin.tag === 'v1.0.8' ? 17 : 19);
     assert.deepEqual(verifySnapshot({ ...release(descriptor), draft: false, immutable: true }, assets(descriptor), descriptor), { ...before, draft: false });
     for (const [field, value] of Object.entries({ id: 1, tag_name: other.origin.tag, target_commitish: other.origin.sourceSha, prerelease: true, draft: null, immutable: true })) {
-      assert.throws(() => verifySnapshot({ ...release(descriptor), [field]: value }, assets(descriptor), descriptor), field);
+      assert.throws(() => verifySnapshot({ ...release(descriptor), [field]: value }, assets(descriptor), descriptor), undefined, field);
     }
     for (let i = 0; i < assetPins.length; i++) for (const [field, value] of Object.entries({ name: '../escape', id: 1, size: 0, state: 'new', digest: 'sha256:wrong' })) {
       const changed = assets(descriptor);
       changed[i][field] = value;
-      assert.throws(() => verifySnapshot(release(descriptor), changed, descriptor), `${i}:${field}`);
+      assert.throws(() => verifySnapshot(release(descriptor), changed, descriptor), undefined, `${i}:${field}`);
     }
     assert.throws(() => verifySnapshot(release(descriptor), assets(descriptor).slice(1), descriptor));
     assert.throws(() => verifySnapshot(release(descriptor), [...assets(descriptor), assets(descriptor)[0]], descriptor));
@@ -174,7 +174,7 @@ for (const descriptor of descriptors) {
       text.replace(/^[a-f0-9]{64}/, '0'.repeat(64)), `${text}${hash('extra')}  z-extra.json\n`
     ]) assert.throws(() => verifyChecksums(bad, read, descriptor, nested));
     for (const name of ['../escape', '/bmff/file', 'bmff/../escape', 'bmff/./file', 'bmff//file', 'bmff\\file', 'other/file', 'bmff/']) {
-      assert.throws(() => verifyChecksums(text, read, descriptor, [name]), name);
+      assert.throws(() => verifyChecksums(text, read, descriptor, [name]), undefined, name);
     }
     assert.throws(() => verifyChecksums(text, read, descriptor, ['bmff/qualification.json', 'bmff/qualification.json']));
     if (nested.length) {
@@ -498,11 +498,10 @@ test('script and workflow safety boundaries stay explicit', () => {
   assert.match(publicJob, /vsi-public-consumer.mjs[^\n]+\$\{\{\s*inputs.confirm_tag\s*\}\}/);
   assert.ok(!/cargo |wasm-pack|pnpm pack|npm publish|release upload/.test(workflow));
   assert.equal((workflow.match(/persist-credentials: false/g) ?? []).length, 3);
-  const prGuard = readFileSync(new URL('../.github/workflows/castlabs-vsi-promotion-guard.yml', import.meta.url), 'utf8');
-  const triggers = prGuard.split(/^jobs:/m)[0];
+  const ci = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
+  const triggers = ci.split(/^jobs:/m)[0];
   assert.match(triggers, /^  pull_request:/m);
-  assert.match(triggers, /branches: \[main\]/);
-  assert.match(prGuard, /if: github.repository == 'castlabs\/c2pa-js' && github.head_ref == 'ci\/publish-vsi-1\.0\.9'/);
+  const prGuard = ci.split('  publication-guards:')[1].split('  main:')[0];
   assert.match(prGuard, /node --test (?:automation\/)?tools\/vsi-promote.test.mjs/);
   assert.ok(!/contents: write|actions: write|secrets\.|cargo |wasm-pack|pnpm install|npm install/.test(prGuard));
   assert.match(prGuard, /persist-credentials: false/);

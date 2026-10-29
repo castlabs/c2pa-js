@@ -114,6 +114,10 @@ test('workflow artifacts survive failed-job retries and inherited release jobs a
       } }).status;
     };
     assert.equal(verify(), 0);
+    manifest.sources.sdk.sha = '0aee9d318289ba4a5e0fe9e0fc1ddc59b0632f91';
+    assert.equal(verify(), 1, 'The previous SDK must not pass publication verification');
+    manifest.sources.sdk.sha = sdkSha;
+    assert.equal(verify(), 0);
     manifest.packagedBrowserQualification.passed = false;
     assert.equal(verify(), 1);
     manifest.packagedBrowserQualification.passed = true;
@@ -277,8 +281,18 @@ test('real pnpm packs and installs synthetic output; source browsers cannot waiv
     assert.equal(passed.status, 0, passed.stderr);
     assert.equal(JSON.parse(readFileSync(join(output, 'provenance.json'))).qualification.passed, true);
     assert.equal(JSON.parse(readFileSync(join(output, 'provenance.json'))).packagedBrowserQualification.passed, false, 'Source browser tests must never waive the packaged-browser gate');
-    writeFileSync(join(root, 'Cargo.toml'), readFileSync(join(root, 'Cargo.toml'), 'utf8').replace(sdkSha, '0'.repeat(40)));
-    assert.throws(() => verifySource(root, sha, '1.0.7'));
+    for (const [file, message] of [['Cargo.toml', 'Wrong SDK pin'], ['Cargo.lock', 'Wrong locked SDK pin']]) {
+      const original = readFileSync(join(root, file), 'utf8');
+      writeFileSync(join(root, file), original.replaceAll(sdkSha, '0aee9d318289ba4a5e0fe9e0fc1ddc59b0632f91'));
+      git('add', file);
+      const wrongSha = git('commit-tree', git('write-tree'), '-m', 'Wrong SDK fixture');
+      git('update-ref', 'HEAD', wrongSha);
+      assert.throws(() => verifySource(root, wrongSha, '1.0.7'), { message });
+      writeFileSync(join(root, file), original);
+      git('add', file);
+      git('update-ref', 'HEAD', sha);
+    }
+    assert.equal(verifySource(root, sha, '1.0.7').sdk.sha, sdkSha);
   } finally {
     rmSync(temp, { recursive: true, force: true });
   }

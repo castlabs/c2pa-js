@@ -117,11 +117,16 @@ The manual workflow and its helpers must first be reviewed and merged onto
 the Castlabs repository's default branch before GitHub registers
 `workflow_dispatch`. An unshared local commit cannot be built by a hosted runner:
 the immutable JS source commit must also be present in `castlabs/c2pa-js`.
-The original repin is `ed584bff09dc3b76331b0e429a0256699d9e4e27` and changes
+The historical bootstrap repin `ed584bff09dc3b76331b0e429a0256699d9e4e27` changed
 only `Cargo.toml` and `Cargo.lock` to SDK
-`0aee9d318289ba4a5e0fe9e0fc1ddc59b0632f91`. Use the approved reachable source
-SHA, not a branch name; checkout, SDK pin, package versions, and tracked-file
-cleanliness are checked before and after building. Workflow helpers come from
+`0aee9d318289ba4a5e0fe9e0fc1ddc59b0632f91`; it is no longer accepted by this workflow.
+The current stable source candidate is `7035c86ddac5029f6db759a8ba7ff83364065a9e`
+([PR #14](https://github.com/castlabs/c2pa-js/pull/14)), pinned to SDK
+`9b1bc268f3e254abcb942969a8bb991365067717`. This identifies a candidate for testing,
+not an approved release or permission to dispatch the workflow.
+Use an explicitly approved reachable source SHA, not a branch name; checkout,
+SDK pin, package versions, and tracked-file cleanliness are checked before and
+after building. Workflow helpers come from
 the immutable dispatch workflow commit, separately from the requested source.
 Merging/pushing and triggering this workflow require separate maintainer approval.
 
@@ -213,17 +218,18 @@ only `contents: read`. No job publishes the draft or npm packages. Maintainers
 must review provenance and remaining CI before manually publishing; tarball
 dependency URLs are unavailable to normal consumers while the release is draft.
 
-Lightweight local checks require a separate checkout of the approved immutable
+Lightweight local checks require a separate checkout of the immutable
 stable source commit, not the automation checkout (whose packages may still use
-`@contentauth`). For example, create a detached worktree at the approved source
-`8bdff3ca43591c830c12a0777a14e6f328db8f2c`; for a later approved source, use its
-full immutable commit SHA instead, never a moving branch name. Run these commands
-from the automation checkout with Node.js 22 or later and pnpm 10.15.0 available
+`@contentauth`). For example, create a detached worktree at the current test candidate
+`7035c86ddac5029f6db759a8ba7ff83364065a9e`; for a later test candidate, use its
+full immutable commit SHA with the required SDK pin, never a moving branch name.
+These local synthetic tests do not authorize release qualification or publication.
+Run these commands from the automation checkout with Node.js 22 or later and pnpm 10.15.0 available
 (use an external `TMPDIR` on a disk-constrained machine):
 
 ```sh
 git worktree add --detach "$HOME/opencode-worktrees/c2pa-js-stable-test-source" \
-  8bdff3ca43591c830c12a0777a14e6f328db8f2c
+  7035c86ddac5029f6db759a8ba7ff83364065a9e
 export CASTLABS_TEST_SOURCE="$HOME/opencode-worktrees/c2pa-js-stable-test-source"
 node --check tools/castlabs-release.mjs
 node --check tools/castlabs-consumer-smoke.mjs

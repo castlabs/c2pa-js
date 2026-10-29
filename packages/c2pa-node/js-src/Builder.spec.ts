@@ -982,6 +982,41 @@ describe("Builder", () => {
   });
 
   describe("Context", () => {
+    it("loads BMFF exclusion conditions through a real SDK context", async () => {
+      const context = new Context({
+        builder: {
+          generateC2paArchive: true,
+          bmffHashExtraExclusions: [{
+            xpath: "/uuid",
+            length: 64,
+            data: [{ offset: 8, value: [0, 1, 127, 255] }],
+            subset: [{ offset: 24, length: 8 }, { offset: 40, length: 0 }],
+            version: 0,
+            flags: [0, 0, 1],
+            exact: false,
+          }],
+        },
+      });
+
+      const builder = await Builder.newAsync(context);
+      expect(builder.getManifestDefinition()).toEqual(
+        Builder.new().getManifestDefinition(),
+      );
+    });
+
+    it("rejects malformed BMFF flags in the native SDK, not the JS facade", async () => {
+      const context = new Context({
+        builder: {
+          generateC2paArchive: true,
+          bmffHashExtraExclusions: [{ xpath: "/uuid", flags: [0, 1] }],
+        },
+      });
+
+      // Serialization succeeds, but native validation must reject this rather than ignore it.
+      await expect(context.toJson()).resolves.toContain('"flags":[0,1]');
+      await expect(Builder.newAsync(context)).rejects.toThrow(/Invalid settings/);
+    });
+
     it("newAsync() with no context behaves like new()", async () => {
       const builder = await Builder.newAsync();
       const definition = builder.getManifestDefinition();

@@ -668,6 +668,82 @@ describe('settingsToJson', () => {
   });
 });
 
+describe('BMFF hash extra exclusions', () => {
+  it('combines exclusion arrays when merging, including when the later list is empty', () => {
+    const first: Settings = {
+      builder: { generateC2paArchive: true, bmffHashExtraExclusions: [{ xpath: '/uuid' }] }
+    };
+    const second: Settings = {
+      builder: { generateC2paArchive: true, bmffHashExtraExclusions: [{ xpath: '/moov/udta' }] }
+    };
+    const empty: Settings = {
+      builder: { generateC2paArchive: true, bmffHashExtraExclusions: [] }
+    };
+
+    expect(mergeSettings(first, second, empty).builder?.bmffHashExtraExclusions).toEqual([
+      { xpath: '/uuid' }, { xpath: '/moov/udta' }
+    ]);
+  });
+
+  it('serializes typed descriptors without losing numeric conditions, arrays, zero or false', async () => {
+    const settings: Settings = {
+      builder: {
+        generateC2paArchive: true,
+        bmffHashExtraExclusions: [
+          {
+            xpath: '/uuid',
+            length: 64,
+            data: [{ offset: 8, value: [0, 1, 127, 255] }],
+            subset: [{ offset: 24, length: 8 }, { offset: 40, length: 0 }],
+            version: 0,
+            flags: [0, 0, 1],
+            exact: false
+          },
+          { xpath: '/moov/udta', length: 0 }
+        ]
+      }
+    };
+    const original = structuredClone(settings);
+    const expected = {
+      builder: {
+        generate_c2pa_archive: true,
+        bmff_hash_extra_exclusions: [
+          {
+            xpath: '/uuid',
+            length: 64,
+            data: [{ offset: 8, value: [0, 1, 127, 255] }],
+            subset: [{ offset: 24, length: 8 }, { offset: 40, length: 0 }],
+            version: 0,
+            flags: [0, 0, 1],
+            exact: false
+          },
+          { xpath: '/moov/udta', length: 0 }
+        ]
+      }
+    };
+
+    expect(JSON.parse(settingsToJson(settings))).toEqual(expected);
+    expect(JSON.parse(await resolveSettings(settings))).toEqual(expected);
+    expect(settings).toEqual(original);
+  });
+
+  it('preserves an explicit empty list without adding one to defaults', async () => {
+    const settings: Settings = {
+      builder: { generateC2paArchive: true, bmffHashExtraExclusions: [] }
+    };
+    const expected = {
+      builder: { generate_c2pa_archive: true, bmff_hash_extra_exclusions: [] }
+    };
+
+    expect(JSON.parse(settingsToJson(settings))).toEqual(expected);
+    expect(JSON.parse(await resolveSettings(settings))).toEqual(expected);
+    expect(settingsToJson({})).toBe('{}');
+    expect(JSON.parse(await resolveSettings(undefined))).toEqual({
+      builder: { generate_c2pa_archive: true }
+    });
+  });
+});
+
 describe('loadSettingsFromUrl', () => {
   it('loads settings from a URL', async () => {
     const mockSettings = JSON.stringify({

@@ -51,4 +51,14 @@ describe('snakeCaseify', () => {
     const result = snakeCaseify({ someArrayField: [] } as any);
     expect(result.some_array_field).toEqual([]);
   });
+
+  it('preserves typed numeric values and nested arrays, including zero and false', () => {
+    expect(snakeCaseify({
+      numericValue: 0,
+      nestedArrays: [[0, 255], [{ byteOffset: 0, exactMatch: false }]]
+    })).toEqual({
+      numeric_value: 0,
+      nested_arrays: [[0, 255], [{ byte_offset: 0, exact_match: false }]]
+    });
+  });
 });

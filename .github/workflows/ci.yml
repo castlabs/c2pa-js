@@ -25,6 +25,9 @@ jobs:
           cache: pnpm
       - run: node tools/check-castlabs-source.mjs
       - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Typecheck settings facade and regression tests without native builds
+        working-directory: packages/c2pa-utilities
+        run: pnpm exec tsc --project tsconfig.settings.json
       - name: Run utilities tests without native builds
         working-directory: packages/c2pa-utilities
         run: pnpm exec vitest run --maxWorkers=1 --no-file-parallelism

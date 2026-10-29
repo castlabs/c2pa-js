@@ -4,19 +4,19 @@ on:
   workflow_dispatch:
     inputs:
       confirm_tag:
-        description: 'Publish the reviewed existing v1.0.8 draft publicly (type v1.0.8)'
+        description: 'Exact reviewed tag: v1.0.8 or v1.0.9 (disabled until final anchors are reviewed)'
         required: true
         type: string
 
 permissions: {}
 
 concurrency:
-  group: castlabs-vsi-publish-existing-v1.0.8
+  group: castlabs-vsi-publish-existing-${{ inputs.confirm_tag }}
   cancel-in-progress: false
 
 jobs:
   promote:
-    if: github.repository == 'castlabs/c2pa-js' && github.ref == 'refs/heads/main' && inputs.confirm_tag == 'v1.0.8'
+    if: github.repository == 'castlabs/c2pa-js' && github.ref == 'refs/heads/main' && (inputs.confirm_tag == 'v1.0.8' || inputs.confirm_tag == 'v1.0.9')
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
@@ -28,16 +28,21 @@ jobs:
           ref: ${{ github.workflow_sha }}
           path: automation
           persist-credentials: false
-      - uses: actions/checkout@v4
-        with:
-          ref: acfa8dd64f499e5f0c459e534b5b5d2437fb5197
-          path: source
-          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 24
       - name: No-network publication guard tests
         run: node --test automation/tools/vsi-promote.test.mjs
+      - name: Select only the enabled reviewed release descriptor
+        id: release
+        env:
+          CONFIRM_TAG: ${{ inputs.confirm_tag }}
+        run: node automation/tools/vsi-promote.mjs select
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.release.outputs.source_sha }}
+          path: source
+          persist-credentials: false
       - name: Verify original run, seal, SDK metadata and unchanged draft; publish exact bytes
         env:
           GH_TOKEN: ${{ github.token }}
@@ -70,7 +75,7 @@ jobs:
         with:
           node-version: 24
       - name: Anonymous final URL install, graph, byte, export, type and WASM checks
-        run: node automation/tools/vsi-public-consumer.mjs "$RUNNER_TEMP/vsi-public-smoke"
+        run: node automation/tools/vsi-public-consumer.mjs "$RUNNER_TEMP/vsi-public-smoke" "${{ inputs.confirm_tag }}"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

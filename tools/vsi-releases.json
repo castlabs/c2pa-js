@@ -1,0 +1,78 @@
+{
+  "v1.0.8": {
+    "schemaVersion": 1,
+    "enabled": true,
+    "origin": {
+      "repository": "castlabs/c2pa-js",
+      "sourceSha": "acfa8dd64f499e5f0c459e534b5b5d2437fb5197",
+      "workflowSha": "acfa8dd64f499e5f0c459e534b5b5d2437fb5197",
+      "sdkSha": "6021100cc5060b06061ca15b634281cfeb97c718",
+      "tag": "v1.0.8",
+      "releaseId": 415628702,
+      "runId": 39009711529,
+      "attempt": 1,
+      "workflowId": 387394909,
+      "workflowPath": ".github/workflows/castlabs-vsi-bundle.yml",
+      "branch": "feat/live-video-vsi"
+    },
+    "anchors": {
+      "SHA256SUMS": { "id": 649766904, "sha256": "1ce63e2bcf18248d223376b3d13ab041538980f972561e6cb162a066e2de53d0" },
+      "provenance.json": { "id": 649766921, "sha256": "8797734cbc857857355f01bc04c98df05857575f2ca9d758a9f77c0402d4cb36" }
+    },
+    "packages": [
+      { "name": "@stardustproof/c2pa-types", "version": "0.7.5", "file": "stardustproof-c2pa-types-0.7.5.tgz", "sha256": "af8f550c318c79e63a7b58ffe48c5437efe31906e867e4e3f6888979d564da1e" },
+      { "name": "@stardustproof/c2pa-wasm", "version": "0.13.2", "file": "stardustproof-c2pa-wasm-0.13.2.tgz", "sha256": "649460a4467fa9b8a0b16314619754ce5c006fe5ee3d6d13e0d9e068c6a2602b" },
+      { "name": "@stardustproof/c2pa-utilities", "version": "0.3.1", "file": "stardustproof-c2pa-utilities-0.3.1.tgz", "sha256": "68c5546e7f7fe808870302c965f33fadafce9863468a0222c5955fde2cef0e5a" },
+      { "name": "@stardustproof/c2pa-web", "version": "0.15.3", "file": "stardustproof-c2pa-web-0.15.3.tgz", "sha256": "68926494b8a6a6b691b078440eb25b159f91832d5364a95cef01ba7e4f2d692e" }
+    ],
+    "wasmSha256": "d69b9951b8d3b6aef990ae5b61dc75e5d883fbc103898dd8390c8cdcf6ca7094",
+    "assetPins": [
+      ["consumer-graph.json", 649766901, 4940], ["consumer-pnpm-lock.yaml", 649766905, 3758],
+      ["consumer.json", 649766902, 4290], ["installed-offsets.json", 649766900, 26042],
+      ["installed-vsi.json", 649766919, 38124], ["provenance.json", 649766921, 13564],
+      ["queue.json", 649766926, 1654], ["SHA256SUMS", 649766904, 1421],
+      ["source-chromium.json", 649766927, 27210], ["source-firefox.json", 649766931, 26158],
+      ["source-vsi.json", 649766934, 48724], ["source-webkit.json", 649766937, 26407],
+      ["stardustproof-c2pa-types-0.7.5.tgz", 649766942, 16252],
+      ["stardustproof-c2pa-utilities-0.3.1.tgz", 649766943, 26435],
+      ["stardustproof-c2pa-wasm-0.13.2.tgz", 649766951, 3550940],
+      ["stardustproof-c2pa-web-0.15.3.tgz", 649766969, 8258107], ["tool-versions.json", 649766972, 686]
+    ]
+  },
+  "v1.0.9": {
+    "schemaVersion": 1,
+    "enabled": false,
+    "origin": {
+      "repository": "castlabs/c2pa-js", "sourceSha": null, "workflowSha": null,
+      "sdkSha": "6021100cc5060b06061ca15b634281cfeb97c718",
+      "tag": "v1.0.9", "releaseId": null, "runId": null, "attempt": null,
+      "workflowId": 387394909, "workflowPath": ".github/workflows/castlabs-vsi-bundle.yml",
+      "branch": "feat/live-video-vsi"
+    },
+    "anchors": {
+      "SHA256SUMS": { "id": null, "sha256": null },
+      "provenance.json": { "id": null, "sha256": null }
+    },
+    "packages": [
+      { "name": "@stardustproof/c2pa-types", "version": "0.7.5", "file": "stardustproof-c2pa-types-0.7.5.tgz", "sha256": null },
+      { "name": "@stardustproof/c2pa-wasm", "version": "0.13.2", "file": "stardustproof-c2pa-wasm-0.13.2.tgz", "sha256": null },
+      { "name": "@stardustproof/c2pa-utilities", "version": "0.3.2", "file": "stardustproof-c2pa-utilities-0.3.2.tgz", "sha256": null },
+      { "name": "@stardustproof/c2pa-web", "version": "0.15.4", "file": "stardustproof-c2pa-web-0.15.4.tgz", "sha256": null }
+    ],
+    "wasmSha256": null,
+    "assetPins": [
+      ["bmff-evidence.tar.gz", null, null, null],
+      ["consumer-graph.json", null, null, null], ["consumer-pnpm-lock.yaml", null, null, null],
+      ["consumer.json", null, null, null], ["installed-offsets.json", null, null, null],
+      ["installed-vsi.json", null, null, null], ["provenance.json", null, null, null],
+      ["queue.json", null, null, null], ["SHA256SUMS", null, null, null],
+      ["source-chromium.json", null, null, null], ["source-firefox.json", null, null, null],
+      ["source-vsi.json", null, null, null], ["source-webkit.json", null, null, null],
+      ["stardustproof-c2pa-types-0.7.5.tgz", null, null, null],
+      ["stardustproof-c2pa-utilities-0.3.2.tgz", null, null, null],
+      ["stardustproof-c2pa-wasm-0.13.2.tgz", null, null, null],
+      ["stardustproof-c2pa-web-0.15.4.tgz", null, null, null],
+      ["tool-versions.json", null, null, null], ["utilities.json", null, null, null]
+    ]
+  }
+}

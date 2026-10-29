@@ -1,0 +1,30 @@
+name: Castlabs VSI Promotion Guards
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/castlabs-vsi-publish-existing.yml'
+      - '.github/workflows/castlabs-vsi-promotion-guard.yml'
+      - 'tools/vsi-promote.mjs'
+      - 'tools/vsi-promote.test.mjs'
+      - 'tools/vsi-public-consumer.mjs'
+      - 'tools/vsi-releases.json'
+      - 'tools/vsi-publication.md'
+
+permissions:
+  contents: read
+
+jobs:
+  publication-guards:
+    if: github.repository == 'castlabs/c2pa-js' && github.head_ref == 'ci/publish-vsi-1.0.9'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node --test tools/vsi-promote.test.mjs

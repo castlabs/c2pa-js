@@ -1,0 +1,87 @@
+{
+  "v1.0.8": {
+    "schemaVersion": 1,
+    "enabled": true,
+    "origin": {
+      "repository": "castlabs/c2pa-js",
+      "sourceSha": "acfa8dd64f499e5f0c459e534b5b5d2437fb5197",
+      "workflowSha": "acfa8dd64f499e5f0c459e534b5b5d2437fb5197",
+      "sdkSha": "6021100cc5060b06061ca15b634281cfeb97c718",
+      "tag": "v1.0.8",
+      "releaseId": 415628702,
+      "runId": 39009711529,
+      "attempt": 1,
+      "workflowId": 387394909,
+      "workflowPath": ".github/workflows/castlabs-vsi-bundle.yml",
+      "branch": "feat/live-video-vsi"
+    },
+    "anchors": {
+      "SHA256SUMS": { "id": 649766904, "sha256": "1ce63e2bcf18248d223376b3d13ab041538980f972561e6cb162a066e2de53d0" },
+      "provenance.json": { "id": 649766921, "sha256": "8797734cbc857857355f01bc04c98df05857575f2ca9d758a9f77c0402d4cb36" }
+    },
+    "packages": [
+      { "name": "@stardustproof/c2pa-types", "version": "0.7.5", "file": "stardustproof-c2pa-types-0.7.5.tgz", "sha256": "af8f550c318c79e63a7b58ffe48c5437efe31906e867e4e3f6888979d564da1e" },
+      { "name": "@stardustproof/c2pa-wasm", "version": "0.13.2", "file": "stardustproof-c2pa-wasm-0.13.2.tgz", "sha256": "649460a4467fa9b8a0b16314619754ce5c006fe5ee3d6d13e0d9e068c6a2602b" },
+      { "name": "@stardustproof/c2pa-utilities", "version": "0.3.1", "file": "stardustproof-c2pa-utilities-0.3.1.tgz", "sha256": "68c5546e7f7fe808870302c965f33fadafce9863468a0222c5955fde2cef0e5a" },
+      { "name": "@stardustproof/c2pa-web", "version": "0.15.3", "file": "stardustproof-c2pa-web-0.15.3.tgz", "sha256": "68926494b8a6a6b691b078440eb25b159f91832d5364a95cef01ba7e4f2d692e" }
+    ],
+    "wasmSha256": "d69b9951b8d3b6aef990ae5b61dc75e5d883fbc103898dd8390c8cdcf6ca7094",
+    "assetPins": [
+      ["consumer-graph.json", 649766901, 4940], ["consumer-pnpm-lock.yaml", 649766905, 3758],
+      ["consumer.json", 649766902, 4290], ["installed-offsets.json", 649766900, 26042],
+      ["installed-vsi.json", 649766919, 38124], ["provenance.json", 649766921, 13564],
+      ["queue.json", 649766926, 1654], ["SHA256SUMS", 649766904, 1421],
+      ["source-chromium.json", 649766927, 27210], ["source-firefox.json", 649766931, 26158],
+      ["source-vsi.json", 649766934, 48724], ["source-webkit.json", 649766937, 26407],
+      ["stardustproof-c2pa-types-0.7.5.tgz", 649766942, 16252],
+      ["stardustproof-c2pa-utilities-0.3.1.tgz", 649766943, 26435],
+      ["stardustproof-c2pa-wasm-0.13.2.tgz", 649766951, 3550940],
+      ["stardustproof-c2pa-web-0.15.3.tgz", 649766969, 8258107], ["tool-versions.json", 649766972, 686]
+    ]
+  },
+  "v1.0.9": {
+    "schemaVersion": 1,
+    "enabled": true,
+    "origin": {
+      "repository": "castlabs/c2pa-js",
+      "sourceSha": "62fad5306933e16633e6787c1bb1d608ce71b851",
+      "workflowSha": "62fad5306933e16633e6787c1bb1d608ce71b851",
+      "sdkSha": "6021100cc5060b06061ca15b634281cfeb97c718",
+      "tag": "v1.0.9", "releaseId": 427935520, "runId": 40884394612, "attempt": 1,
+      "workflowId": 387394909, "workflowPath": ".github/workflows/castlabs-vsi-bundle.yml",
+      "branch": "feat/live-video-vsi"
+    },
+    "anchors": {
+      "SHA256SUMS": { "id": 688733542, "sha256": "1a5e3733c8cfacfa920ab6b02370bf126f07a07ab97c530ba4e43d21d4542ed7" },
+      "provenance.json": { "id": 688733608, "sha256": "d5a551f553a7b6c6f951c8a3a0a916014f9a94ab8367ba15ed7299e81d2c69a0" }
+    },
+    "packages": [
+      { "name": "@stardustproof/c2pa-types", "version": "0.7.5", "file": "stardustproof-c2pa-types-0.7.5.tgz", "sha256": "af8f550c318c79e63a7b58ffe48c5437efe31906e867e4e3f6888979d564da1e" },
+      { "name": "@stardustproof/c2pa-wasm", "version": "0.13.2", "file": "stardustproof-c2pa-wasm-0.13.2.tgz", "sha256": "649460a4467fa9b8a0b16314619754ce5c006fe5ee3d6d13e0d9e068c6a2602b" },
+      { "name": "@stardustproof/c2pa-utilities", "version": "0.3.2", "file": "stardustproof-c2pa-utilities-0.3.2.tgz", "sha256": "59f76edaffe03f0e188b911298edbf43f541cd00279f114bdda9e6ef7162ef8f" },
+      { "name": "@stardustproof/c2pa-web", "version": "0.15.4", "file": "stardustproof-c2pa-web-0.15.4.tgz", "sha256": "f1cdf254b1412ac94b7a9e85f70bda8235f52c4fd474a53dea8025a7b0e6840e" }
+    ],
+    "wasmSha256": "d69b9951b8d3b6aef990ae5b61dc75e5d883fbc103898dd8390c8cdcf6ca7094",
+    "assetPins": [
+      ["bmff-evidence.tar.gz", 688733547, 42287134, "611f1db87ff03385f7c877b751358f4a9758fb1931f6bc96fec7d41b02ac1ae8"],
+      ["consumer-graph.json", 688733538, 4940, "eda8be1ff22f3210b4e76530974aa26f50bfe949e7f9966d9e511ebcc46aa0fb"],
+      ["consumer-pnpm-lock.yaml", 688733546, 3758, "68abfe1a420dbd409d7fa6626463ad5a88dc55c7c2b83c6e55b12e61e6020c6f"],
+      ["consumer.json", 688733545, 4290, "528f657c3f49efeaf75ac9c173858bfe6df917a954f0623fc1d4fa9128b27871"],
+      ["installed-offsets.json", 688733578, 26052, "a2ad748cd9a05c1e1fadedf7c82448ec5a048afd55c6cd3bd76ae278d2e497dc"],
+      ["installed-vsi.json", 688733574, 38134, "fcbca2f1ab64b1521359fb5104939fef43a05bad83ca78f2635ac5749376a370"],
+      ["provenance.json", 688733608, 25723, "d5a551f553a7b6c6f951c8a3a0a916014f9a94ab8367ba15ed7299e81d2c69a0"],
+      ["queue.json", 688733614, 1655, "6c568b2be9677a71d4e39dae2933776217079b2a655f45aa49140cb6606fbf95"],
+      ["SHA256SUMS", 688733542, 12157, "1a5e3733c8cfacfa920ab6b02370bf126f07a07ab97c530ba4e43d21d4542ed7"],
+      ["source-chromium.json", 688733637, 27264, "e37e381126140c21421cdc30f935d7db57b9edbf7f9aaaa59260440780fb9890"],
+      ["source-firefox.json", 688733638, 26158, "7ac3ecc8a7b81e8187c4cb9fcf132aeef620b933d3185959628d5289336c9b3e"],
+      ["source-vsi.json", 688733650, 48783, "f007b93e635b6efa8cc8907f0f17ba3caab4dda7fdf033c6c71a745002f1130a"],
+      ["source-webkit.json", 688733660, 26370, "149908db9e88a7d9ccb1cbb423cf94864f4f984263ff5fd8f44cb049eebefea0"],
+      ["stardustproof-c2pa-types-0.7.5.tgz", 688733658, 16252, "af8f550c318c79e63a7b58ffe48c5437efe31906e867e4e3f6888979d564da1e"],
+      ["stardustproof-c2pa-utilities-0.3.2.tgz", 688733673, 27082, "59f76edaffe03f0e188b911298edbf43f541cd00279f114bdda9e6ef7162ef8f"],
+      ["stardustproof-c2pa-wasm-0.13.2.tgz", 688733688, 3550940, "649460a4467fa9b8a0b16314619754ce5c006fe5ee3d6d13e0d9e068c6a2602b"],
+      ["stardustproof-c2pa-web-0.15.4.tgz", 688733696, 8258112, "f1cdf254b1412ac94b7a9e85f70bda8235f52c4fd474a53dea8025a7b0e6840e"],
+      ["tool-versions.json", 688733702, 686, "dc935e305b6127366e7a5be2fac3101a4c4e3823792ebf48c4820d3aafc1367d"],
+      ["utilities.json", 688733739, 30857, "4a4593e72a42c44fad6d1d911b71da2574a285a73268f179d2265a5ee7dd78aa"]
+    ]
+  }
+}

@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       confirm_tag:
-        description: 'Exact reviewed tag: v1.0.8 or v1.0.9 (disabled until final anchors are reviewed)'
+        description: 'Exact reviewed tag: v1.0.8 or v1.0.9'
         required: true
         type: string
 

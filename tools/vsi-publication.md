@@ -5,7 +5,7 @@ in `vsi-releases.json`. This automation-only change starts from castlabs/main
 `65a8c873bc1767818a60993c50345c2257cae51a` on `ci/publish-vsi-1.0.9`.
 It does not merge the SDK branch into main or change application products.
 Independent review, commits, pushes, PRs, merge and dispatch belong to the parent.
-No publication or other remote action is performed by implementing this change.
+No publication or remote mutation is performed by implementing this change.
 
 ## Locked Releases
 
@@ -16,42 +16,53 @@ An already-public release is verified idempotently, never edited, retagged or
 replaced. Its WASM SHA-256 is also recorded in the candidate's reviewed
 `release/bmff-exclusion-inputs.json`; it is not a default for another release.
 
-`v1.0.9` is **disabled and not publishable**. Its nineteen top-level filenames
-and package versions are fixed, but all final draft identities and byte pins
-are deliberately `null`. Merely changing `enabled` to `true` fails validation.
+`v1.0.9` now has a complete enabled descriptor for the final qualified draft.
+This is **not a public release yet**: publication still requires independent
+review, merge to main and an explicit main-only promotion dispatch by the parent.
 There are no arbitrary repository, version, run, source or descriptor-file inputs.
 `confirm_tag` must exactly select an enabled record; no trimming or fallback occurs.
 
-## Complete 1.0.9 Record
+## Final 1.0.9 Draft
 
-The parent must populate the existing `v1.0.9` record from the final successful
-workflow-dispatch draft, then independently review the completed record and code:
+Read-only GitHub GETs confirmed the exact successful original workflow-dispatch
+run and its `build` and `publish` jobs, plus the draft release metadata:
 
-- Keep `schemaVersion: 1`, tag `v1.0.9`, repository `castlabs/c2pa-js`, SDK
-  `6021100cc5060b06061ca15b634281cfeb97c718`, workflow ID `387394909`, path
-  `.github/workflows/castlabs-vsi-bundle.yml`, and branch `feat/live-video-vsi`.
-- Set `origin.releaseId`, `origin.runId` and `origin.attempt` to positive safe
-  JSON integers for the exact draft and original successful attempt, not this
-  promotion run or a PR artifact run.
-- Set `origin.sourceSha` to the full lowercase 40-hex qualified source and exact
-  release target; set `origin.workflowSha` to the original provenance workflow
-  SHA, also full lowercase 40-hex. Confirm both against the original build.
-- Fill each of the nineteen `assetPins` tuples as
-  `["exact-filename", assetId, sizeInBytes, "lowercase-64-hex-sha256"]`.
-  Use GitHub asset IDs, positive byte sizes, and independently downloaded hashes
-  matching the API's `sha256:<digest>`. Do not add/remove/rename files.
-- Fill `anchors.SHA256SUMS` and `anchors["provenance.json"]` as
-  `{ "id": assetId, "sha256": "lowercase-64-hex-sha256" }`, matching their
-  tuples. These are externally reviewed byte anchors, not hashes learned at
-  promotion time.
-- Fill the four `packages[].sha256` values from the final draft tarballs,
-  matching their asset pins. Versions stay types `0.7.5`, WASM `0.13.2`,
-  utilities `0.3.2`, and web `0.15.4`, including exact filenames.
-- Set `wasmSha256` from the actual final draft WASM, agreeing with provenance,
-  all shipped WASM copies and SRI. Do not assume the 1.0.8 `d69...` hash.
-- Only after all evidence and identities are final and independently reviewed,
-  set `enabled: true` and merge the reviewed automation/descriptor to main.
-  Leave the entire `v1.0.8` record untouched.
+- Repository `castlabs/c2pa-js`; tag `v1.0.9`; release ID `427935520`.
+- Source, release target and provenance workflow SHA:
+  `62fad5306933e16633e6787c1bb1d608ce71b851`.
+- Original run `40884394612`, attempt `1`, branch `feat/live-video-vsi`, workflow
+  ID `387394909`, path `.github/workflows/castlabs-vsi-bundle.yml`.
+- Release state at inspection: `draft: true`, `prerelease: false`,
+  `immutable: false`. No promotion was dispatched.
+- Qualified SDK remains
+  `6021100cc5060b06061ca15b634281cfeb97c718`; native qualification remains run
+  `39004446457`, attempt `1`.
+
+All nineteen paginated asset API names/IDs/sizes/digests are pinned in
+`vsi-releases.json` as `["filename", assetId, sizeInBytes, "64-hex-sha256"]`.
+Every size and SHA-256 was compared with the parent's downloaded final draft
+files. The provenance package hashes agree with the actual four tarballs:
+types `0.7.5`, WASM `0.13.2`, utilities `0.3.2`, web `0.15.4`.
+The complete historical `v1.0.8` record is unchanged.
+
+The final byte anchors, also matching asset metadata and local hashes, are:
+
+- `SHA256SUMS`: asset `688733542`, 12,157 bytes,
+  SHA-256 `1a5e3733c8cfacfa920ab6b02370bf126f07a07ab97c530ba4e43d21d4542ed7`.
+- `provenance.json`: asset `688733608`, 25,723 bytes,
+  SHA-256 `d5a551f553a7b6c6f951c8a3a0a916014f9a94ab8367ba15ed7299e81d2c69a0`.
+- Actual final provenance WASM SHA-256:
+  `d69b9951b8d3b6aef990ae5b61dc75e5d883fbc103898dd8390c8cdcf6ca7094`;
+  SRI `sha256-1puZUbjTtq75kK5bYdx15diD+8EDiY3YOQyM3PbKcJQ=`.
+
+The approved `bmff-evidence.tar.gz` is asset `688733547`, 42,287,134 bytes,
+SHA-256 `611f1db87ff03385f7c877b751358f4a9758fb1931f6bc96fec7d41b02ac1ae8`.
+It exceeds the old 32 MiB `gh` output buffer. Binary downloads now have an
+explicit 64 MiB limit; text API responses retain 32 MiB. The parent's measured
+48,691,200-byte uncompressed archive fits the unchanged 128 MiB decompression
+cap. No build budgets or workflow timeouts were increased. Read-only archive
+listing showed only short regular `bmff/...` members, with no path/type anomaly;
+the promotion verifier itself was not run locally.
 
 The nineteen top-level files are the four tarballs, `SHA256SUMS`,
 `provenance.json`, `tool-versions.json`, `consumer-graph.json`,
@@ -135,8 +146,10 @@ coverage for both descriptors, run/attempt/repository/job swaps, exact asset
 identities/digests, nested checksum and archive paths/types/bytes, source verifier
 reuse, unchanged qualification strictness, public URL graphs, credential rejection
 and workflow safety boundaries. Synthetic records cannot enable production;
-tests also work after the parent fills and enables the reviewed 1.0.9 record.
+the enabled actual 1.0.9 descriptor and binary/text/decompression buffer bounds
+are covered too. Existing Node 24 assertion diagnostic fixes are preserved.
 
-Local verification for this task is restricted to `node --check` on the changed
+Local verification uses read-only GitHub GET metadata, file sizes/SHA-256,
+provenance/checksum reads and archive listing, plus `node --check` on changed
 JavaScript modules and `git diff --check`. No local tests, application build,
 dependency installation, typecheck, browser or Rust command is authorized.

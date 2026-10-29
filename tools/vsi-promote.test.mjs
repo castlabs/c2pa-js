@@ -41,6 +41,32 @@ const dispatch = ({ origin }) => ({
   CONFIRM_TAG: origin.tag, GITHUB_ACTIONS: 'true'
 });
 
+test('final v1.0.9 descriptor selects the exact successful draft and bounded asset layout', () => {
+  const descriptor = selectRelease('v1.0.9');
+  assert.deepEqual(descriptor.origin, {
+    repository: 'castlabs/c2pa-js', sourceSha: '62fad5306933e16633e6787c1bb1d608ce71b851',
+    workflowSha: '62fad5306933e16633e6787c1bb1d608ce71b851', sdkSha: '6021100cc5060b06061ca15b634281cfeb97c718',
+    tag: 'v1.0.9', releaseId: 427935520, runId: 40884394612, attempt: 1, workflowId: 387394909,
+    workflowPath: '.github/workflows/castlabs-vsi-bundle.yml', branch: 'feat/live-video-vsi'
+  });
+  assert.deepEqual(descriptor.anchors, {
+    SHA256SUMS: { id: 688733542, sha256: '1a5e3733c8cfacfa920ab6b02370bf126f07a07ab97c530ba4e43d21d4542ed7' },
+    'provenance.json': { id: 688733608, sha256: 'd5a551f553a7b6c6f951c8a3a0a916014f9a94ab8367ba15ed7299e81d2c69a0' }
+  });
+  assert.equal(descriptor.wasmSha256, 'd69b9951b8d3b6aef990ae5b61dc75e5d883fbc103898dd8390c8cdcf6ca7094');
+  assert.equal(descriptor.assetPins.length, 19);
+  const archive = descriptor.assetPins.find(p => p[0] === 'bmff-evidence.tar.gz');
+  assert.deepEqual(archive, ['bmff-evidence.tar.gz', 688733547, 42287134, '611f1db87ff03385f7c877b751358f4a9758fb1931f6bc96fec7d41b02ac1ae8']);
+  assert.ok(archive[2] > 32 * 1024 * 1024);
+  assert.ok(descriptor.assetPins.every(([, , size]) => size < 64 * 1024 * 1024));
+  verifyOrigin(originalRun(descriptor), originalJobs(descriptor), descriptor);
+  verifySnapshot(release(descriptor), assets(descriptor), descriptor);
+  verifyDispatch(dispatch(descriptor), descriptor);
+  assert.deepEqual(publicManifest(descriptor).dependencies, Object.fromEntries(descriptor.packages.map(p => [p.name, publicUrl(p, descriptor)])));
+  assert.throws(() => verifyOrigin(originalRun(descriptors[1]), originalJobs(descriptors[1]), descriptor));
+  assert.throws(() => verifySnapshot(release(descriptors[0]), assets(descriptors[0]), descriptor));
+});
+
 test('only locked enabled releases are selectable; synthetic descriptors never enable production', () => {
   const before = structuredClone(locked);
   const reviewed = locked['v1.0.9'];
@@ -474,6 +500,8 @@ test('script and workflow safety boundaries stay explicit', () => {
   assert.match(script, /if \(final.draft\) gh\(\['release', 'edit', origin.tag, '--repo', origin.repository, '--draft=false'\]\)/);
   assert.match(script, /const descriptor = selectRelease\(process.env.CONFIRM_TAG\)/);
   assert.match(script, /source_sha=\$\{descriptor.origin.sourceSha\}/);
+  assert.match(script, /maxBuffer: \(binary \? 64 : 32\) \* 1024 \* 1024/);
+  assert.match(script, /maxOutputLength: 128 \* 1024 \* 1024/);
   const workflow = readFileSync(new URL('../.github/workflows/castlabs-vsi-publish-existing.yml', import.meta.url), 'utf8');
   assert.ok(!/^  (push|pull_request|schedule|workflow_run):/m.test(workflow));
   assert.match(workflow, /group:.*\$\{\{\s*inputs.confirm_tag\s*\}\}/);

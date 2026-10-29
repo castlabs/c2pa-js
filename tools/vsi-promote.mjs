@@ -204,7 +204,8 @@ export async function verifyPromotion(source, directory, run, jobs, descriptor) 
 }
 
 function gh(args, binary = false) {
-  const result = spawnSync('gh', args, { encoding: binary ? undefined : 'utf8', maxBuffer: 32 * 1024 * 1024 });
+  // The reviewed 1.0.9 BMFF archive is 42,287,134 bytes; keep downloads bounded.
+  const result = spawnSync('gh', args, { encoding: binary ? undefined : 'utf8', maxBuffer: (binary ? 64 : 32) * 1024 * 1024 });
   assert.equal(result.status, 0, `gh failed: ${result.error ?? result.stderr}`);
   return result.stdout;
 }
